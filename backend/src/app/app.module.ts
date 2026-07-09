@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from '@users/users.module';
+import { UsersModule } from '../modules/users.module';
+import { MeetingsModule } from '../modules/meetings.module';
+import { AttendeesModule } from '../modules/attendees.module';
+import { AiModule } from '../modules/ai.module';
 
 @Module({
   imports: [
@@ -10,6 +13,9 @@ import { UsersModule } from '@users/users.module';
       isGlobal: true,
     }),
     UsersModule,
+    MeetingsModule,
+    AttendeesModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

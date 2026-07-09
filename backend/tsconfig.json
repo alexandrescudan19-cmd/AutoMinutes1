@@ -25,9 +25,15 @@
     "baseUrl": "./",
     "paths": {
       "@app/*": ["src/app/*"],
-      "@users/*": ["src/users/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@services/*": ["src/services/*"],
+      "@modules/*": ["src/modules/*"],
+      "@repositories/*": ["src/repositories/*"],
+      "@models/*": ["src/models/*"],
+      "@dto/*": ["src/dto/*"],
       "@common/*": ["src/common/*"],
-      "@config/*": ["src/config/*"]
+      "@config/*": ["src/config/*"],
+      "@database/*": ["src/database/*"]
     }
   }
 }
