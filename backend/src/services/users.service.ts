@@ -2,38 +2,43 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from '../dto/users/create-user.dto';
 import { UpdateUserDto } from '../dto/users/update-user.dto';
 import { User } from '../models/user.schema';
+import { UsersRepository } from '../repositories/users.repository';
 
 @Injectable()
 export class UsersService {
-  private readonly users: User[] = [];
-  private nextId = 1;
+  constructor(private readonly usersRepository: UsersRepository) {}
 
-  create(createUserDto: CreateUserDto): User {
-    const user: User = { id: this.nextId++, ...createUserDto };
-    this.users.push(user);
-    return user;
+  create(createUserDto: CreateUserDto): Promise<User> {
+    const { password, ...userData } = createUserDto;
+    return this.usersRepository.create({
+      ...userData,
+      passwordHash: password,
+    });
   }
 
-  findAll(): User[] {
-    return this.users;
+  findAll(): Promise<User[]> {
+    return this.usersRepository.findAll();
   }
 
-  findOne(id: number): User {
-    const user = this.users.find((u) => u.id === id);
+  async findOne(id: string): Promise<User> {
+    const user = await this.usersRepository.findOne(id);
     if (!user) throw new NotFoundException(`User #${id} not found`);
     return user;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto): User {
-    const user = this.findOne(id);
-    Object.assign(user, updateUserDto);
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const { password, ...userData } = updateUserDto;
+    const user = await this.usersRepository.update(id, {
+      ...userData,
+      ...(password ? { passwordHash: password } : {}),
+    });
+    if (!user) throw new NotFoundException(`User #${id} not found`);
     return user;
   }
 
-  remove(id: number): User {
-    const index = this.users.findIndex((u) => u.id === id);
-    if (index === -1) throw new NotFoundException(`User #${id} not found`);
-    const [removed] = this.users.splice(index, 1);
-    return removed;
+  async remove(id: string): Promise<User> {
+    const user = await this.usersRepository.remove(id);
+    if (!user) throw new NotFoundException(`User #${id} not found`);
+    return user;
   }
 }
