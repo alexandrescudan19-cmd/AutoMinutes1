@@ -13,4 +13,7 @@ export type { LoaderProps } from './Loader/Loader.tsx';
 export { default as TextArea } from './TextArea/TextArea.tsx';
 export type { TextAreaProps } from './TextArea/TextArea.tsx';
 
+export { default as Card } from './Card/Card.tsx';
+export * from './Card/Card.tsx';
+
 export { cn } from './cn.ts';
