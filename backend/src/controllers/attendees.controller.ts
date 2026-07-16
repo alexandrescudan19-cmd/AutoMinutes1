@@ -1,32 +1,42 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CreateAttendeeDto } from '../dto/attendees/create-attendee.dto';
 import { UpdateAttendeeDto } from '../dto/attendees/update-attendee.dto';
 import { AttendeesService } from '../services/attendees.service';
 
+@ApiTags('attendees')
 @Controller('attendees')
 export class AttendeesController {
   constructor(private readonly attendeesService: AttendeesService) {}
 
+  @ApiOperation({ summary: 'Creeaza un participant' })
   @Post()
   create(@Body() createAttendeeDto: CreateAttendeeDto) {
     return this.attendeesService.create(createAttendeeDto);
   }
 
+  @ApiOperation({ summary: 'Listeaza toti participantii' })
   @Get()
   findAll() {
     return this.attendeesService.findAll();
   }
 
+  @ApiOperation({ summary: 'Returneaza un participant dupa ID' })
+  @ApiParam({ name: 'id', description: 'ID-ul participantului' })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.attendeesService.findOne(id);
   }
 
+  @ApiOperation({ summary: 'Actualizeaza un participant' })
+  @ApiParam({ name: 'id', description: 'ID-ul participantului' })
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAttendeeDto: UpdateAttendeeDto) {
     return this.attendeesService.update(id, updateAttendeeDto);
   }
 
+  @ApiOperation({ summary: 'Sterge un participant' })
+  @ApiParam({ name: 'id', description: 'ID-ul participantului' })
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.attendeesService.remove(id);
