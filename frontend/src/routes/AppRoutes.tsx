@@ -4,6 +4,8 @@ import RegisterPage from "../pages/Register/RegisterPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import VerifyEmailPage from "../pages/VerifyEmail/VerifyEmailPage";
 import OAuthCallbackPage from "../pages/Login/OAuthCallbackPage";
+import ForgotPasswordPage from "../pages/ResetPassword/ForgotPassword";
+import ResetPasswordPage from "../pages/ResetPassword/ResetPassword";
 
 function ProtectedRoute() {
   const token = localStorage.getItem("accessToken");
@@ -16,6 +18,8 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
       </Route>

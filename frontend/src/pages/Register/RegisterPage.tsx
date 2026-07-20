@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Card, Input, PasswordInput } from "../../components/atoms";
 import { api } from "../../services/api";
+import { AuthLayout } from "../../components/templates";
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -37,7 +38,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
       <Card title="Create account" className="w-full max-w-md">
         {succes ? (
           <div className="flex flex-col items-center gap-3 text-center">
@@ -94,13 +95,13 @@ export default function RegisterPage() {
             </Button>
             <p className="text-center text-sm text-gray-500">
               Already have account?{" "}
-              <Link to="/login" className="text-brand hover:underline">
+              <Link to="/login" className="text-brand link-underline">
                 Sign in
               </Link>
             </p>
           </form>
         )}
       </Card>
-    </div>
+    </AuthLayout>
   );
 }

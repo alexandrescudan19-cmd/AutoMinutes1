@@ -5,11 +5,20 @@ import { User, UserDocument, UserRole } from '../models/user.schema';
 
 type CreateUserData = Omit<
   User,
-  'id' | 'createdAt' | 'updatedAt' | 'role' | 'isVerified' | 'verificationToken'
+  | 'id'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'role'
+  | 'isVerified'
+  | 'verificationToken'
+  | 'resetPasswordToken'
+  | 'resetPasswordExpires'
 > & {
   role?: UserRole;
   isVerified?: boolean;
   verificationToken?: string | null;
+  resetPasswordToken?: string | null;
+  resetPasswordExpires?: string | null;
 };
 
 @Injectable()
@@ -44,6 +53,13 @@ export class UsersRepository {
     return user ? this.toModel(user) : undefined;
   }
 
+  async findByResetToken(token: string): Promise<User | undefined> {
+    const user = await this.userModel
+      .findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: new Date() } })
+      .exec();
+    return user ? this.toModel(user) : undefined;
+  }
+
   async update(id: string, data: Partial<User>): Promise<User | undefined> {
     const rest = { ...data };
     delete rest.id;
@@ -69,6 +85,8 @@ export class UsersRepository {
       role: document.role,
       isVerified: document.isVerified,
       verificationToken: document.verificationToken ?? null,
+      resetPasswordToken: document.resetPasswordToken ?? null,
+      resetPasswordExpires: document.resetPasswordExpires ?? null,
       createdAt: document.createdAt?.toString(),
       updatedAt: document.updatedAt?.toString(),
     };

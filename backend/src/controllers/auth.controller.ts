@@ -13,6 +13,8 @@ import {
 import { AuthService } from '@services/auth.service';
 import { RegisterDto } from '@dto/auth/register.dto';
 import { LoginDto } from '@dto/auth/login.dto';
+import { ForgotPasswordDto } from '@dto/auth/forgot-password.dto';
+import { ResetPasswordDto } from '@dto/auth/reset-password.dto';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 
@@ -29,6 +31,18 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Get('verify')

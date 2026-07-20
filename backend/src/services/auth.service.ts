@@ -9,6 +9,8 @@ import * as bcrypt from 'bcrypt';
 import { UsersRepository } from '../repositories/users.repository';
 import { RegisterDto } from '../dto/auth/register.dto';
 import { LoginDto } from '../dto/auth/login.dto';
+import { ForgotPasswordDto } from '@dto/auth/forgot-password.dto';
+import { ResetPasswordDto } from '@dto/auth/reset-password.dto';
 import { User } from '../models/user.schema';
 import { randomBytes } from 'crypto';
 import { MailService } from './mail.service';
@@ -94,6 +96,57 @@ export class AuthService {
     });
 
     return { message: 'Email verified successfully. You can sign in.' };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const genericResponse = {
+      message: 'A password reset link has been sent!',
+    };
+
+    if (!dto.email?.includes('@')) {
+      return genericResponse;
+    }
+
+    const user = await this.usersRepository.findByEmail(dto.email);
+    if (!user) {
+      return genericResponse;
+    }
+
+    const resetPasswordToken = randomBytes(32).toString('hex');
+    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // valabilitate o ora
+
+    await this.usersRepository.update(user.id, {
+      resetPasswordToken,
+      resetPasswordExpires,
+    });
+
+    await this.mailService.sendPasswordResetEmail(user.email, resetPasswordToken);
+
+    return genericResponse;
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    if (!dto.token) {
+      throw new BadRequestException('Reset token is missing');
+    }
+    if (!dto.password || dto.password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters long');
+    }
+
+    const user = await this.usersRepository.findByResetToken(dto.token);
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    await this.usersRepository.update(user.id, {
+      passwordHash,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+
+    return { message: 'Your password has been reset succesfully.' };
   }
 
   async loginWithGoogle(googleUser: {

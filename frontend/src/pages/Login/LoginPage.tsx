@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Card, Input, PasswordInput } from "../../components/atoms";
+import { AuthLayout } from "../../components/templates";
 import { api } from "../../services/api";
 
 export default function LoginPage() {
@@ -49,7 +50,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
+      {" "}
       <Card title="Sign in" className="w-full max-w-md">
         <form
           className="flex flex-col gap-4"
@@ -71,6 +73,14 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <div className="flex justify-end">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-brand link-underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" isLoading={isLoading} fullWidth>
             Sign in
@@ -91,12 +101,12 @@ export default function LoginPage() {
           </div>
           <p className="text-center text-sm text-gray-500">
             No account?{" "}
-            <Link to="/register" className="text-brand hover:underline">
+            <Link to="/register" className="text-brand link-underline">
               Register
             </Link>
           </p>
         </form>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
