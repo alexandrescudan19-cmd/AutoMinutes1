@@ -1,8 +1,17 @@
 import { useState } from "react";
+import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { Button, Card, Input, PasswordInput } from "../../components/atoms";
 import { api } from "../../services/api";
 import { AuthLayout } from "../../components/templates";
+
+function getApiErrorMessage(error: unknown) {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message ?? "Something went wrong";
+  }
+
+  return "Something went wrong";
+}
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("");
@@ -30,8 +39,8 @@ export default function RegisterPage() {
         password,
       });
       setSucces(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

@@ -1,7 +1,16 @@
 import { useState } from "react";
+import { isAxiosError } from "axios";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button, Card, PasswordInput } from "../../components/atoms";
 import { api } from "../../services/api";
+
+function getApiErrorMessage(error: unknown) {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message ?? "Something went wrong";
+  }
+
+  return "Something went wrong";
+}
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -34,8 +43,8 @@ export default function ResetPasswordPage() {
       });
       setMessage(data.message);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

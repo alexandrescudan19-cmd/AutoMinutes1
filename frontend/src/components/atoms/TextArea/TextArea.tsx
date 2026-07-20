@@ -1,6 +1,7 @@
 import { forwardRef, useId, type TextareaHTMLAttributes } from 'react';
 import { cn } from '../cn.ts';
-import { FieldWrapper, getFieldDescribedBy } from '../FieldWrapper.tsx';
+import { FieldWrapper } from '../FieldWrapper.tsx';
+import { getFieldDescribedBy } from '../fieldDescribedBy.ts';
 
 // Asemanator cuInput, dar mostenim atributele <TextArea> (nu <input>).
 export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {

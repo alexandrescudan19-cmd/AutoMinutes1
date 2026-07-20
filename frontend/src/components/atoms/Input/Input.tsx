@@ -1,6 +1,7 @@
 import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 import { cn } from '../cn.ts';
-import { FieldWrapper, getFieldDescribedBy } from '../FieldWrapper.tsx';
+import { FieldWrapper } from '../FieldWrapper.tsx';
+import { getFieldDescribedBy } from '../fieldDescribedBy.ts';
 
 // Mostenim toate atributele unui <input> normal (type, placeholder, value, onChange...)
 // si adaugam ale noastre: label, error, hint

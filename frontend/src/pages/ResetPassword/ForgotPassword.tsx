@@ -1,7 +1,16 @@
 import { useState } from "react";
+import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import { Button, Card, Input } from "../../components/atoms";
 import { api } from "../../services/api";
+
+function getApiErrorMessage(error: unknown) {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message ?? "Something went wrong";
+  }
+
+  return "Something went wrong";
+}
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -17,8 +26,8 @@ export default function ForgotPasswordPage() {
       const { data } = await api.post("/auth/forgot-password", { email });
       setMessage(data.message);
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
