@@ -1,7 +1,5 @@
 # AutoMinutes
 
-
-
 ## Comenzi utilizate
 
 ```bash
@@ -34,6 +32,8 @@ npm install @nestjs/swagger
 npm install axios
 
 npm install googleapis
+
+npm install nodemailer
 ```
 
 ---

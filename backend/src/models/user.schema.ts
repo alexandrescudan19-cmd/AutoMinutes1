@@ -27,6 +27,18 @@ export class User {
   @Prop({ enum: UserRole, default: UserRole.User })
   role!: UserRole;
 
+  @Prop({ default: false })
+  isVerified!: boolean;
+
+  @Prop({ type: String, default: null })
+  verificationToken!: string | null;
+
+  @Prop({ type: String, default: null })
+  resetPasswordToken!: string | null;
+
+  @Prop({ type: Date, default: null })
+  resetPasswordExpires!: Date | null;
+
   createdAt!: string;
   updatedAt!: string;
 }

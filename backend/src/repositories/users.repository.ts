@@ -3,8 +3,22 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument, UserRole } from '../models/user.schema';
 
-type CreateUserData = Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'role'> & {
+type CreateUserData = Omit<
+  User,
+  | 'id'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'role'
+  | 'isVerified'
+  | 'verificationToken'
+  | 'resetPasswordToken'
+  | 'resetPasswordExpires'
+> & {
   role?: UserRole;
+  isVerified?: boolean;
+  verificationToken?: string | null;
+  resetPasswordToken?: string | null;
+  resetPasswordExpires?: string | null;
 };
 
 @Injectable()
@@ -26,6 +40,23 @@ export class UsersRepository {
 
   async findOne(id: string): Promise<User | undefined> {
     const user = await this.userModel.findById(id).exec();
+    return user ? this.toModel(user) : undefined;
+  }
+
+  async findByEmail(email: string): Promise<User | undefined> {
+    const user = await this.userModel.findOne({ email: email.toLocaleLowerCase().trim() }).exec();
+    return user ? this.toModel(user) : undefined;
+  }
+
+  async findByVerificationToken(token: string): Promise<User | undefined> {
+    const user = await this.userModel.findOne({ verificationToken: token }).exec();
+    return user ? this.toModel(user) : undefined;
+  }
+
+  async findByResetToken(token: string): Promise<User | undefined> {
+    const user = await this.userModel
+      .findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: new Date() } })
+      .exec();
     return user ? this.toModel(user) : undefined;
   }
 
@@ -52,6 +83,10 @@ export class UsersRepository {
       email: document.email,
       passwordHash: document.passwordHash,
       role: document.role,
+      isVerified: document.isVerified,
+      verificationToken: document.verificationToken ?? null,
+      resetPasswordToken: document.resetPasswordToken ?? null,
+      resetPasswordExpires: document.resetPasswordExpires ?? null,
       createdAt: document.createdAt?.toString(),
       updatedAt: document.updatedAt?.toString(),
     };
