@@ -4,23 +4,21 @@ import Badge, { type BadgeVariant } from '../../../atoms/Badge/Badge.tsx';
 // Cheile sunt scrise cu litere mici, ca sa nu conteze daca backend-ul trimite
 
 const STATUS_MAP: Record<string, { variant: BadgeVariant; label: string }> = {
+  upcoming:      { variant: 'info',    label: 'Upcoming' },
+  cancelled:     { variant: 'neutral', label: 'Cancelled' },
 
-  pending:     { variant: 'info',    label: 'Pending' },
-  processing:  { variant: 'warning', label: 'Processing' },
-  completed:   { variant: 'success', label: 'Completed' },
-  failed:      { variant: 'danger',  label: 'Failed' },
-  cancelled:   { variant: 'neutral', label: 'Cancelled' },
-  idle:        { variant: 'neutral', label: 'Idle' },
+  idle:          { variant: 'neutral', label: 'Idle' },
+  processing:    { variant: 'warning', label: 'Processing' },
+  failed:        { variant: 'danger',  label: 'Failed' },
 
+  pending:       { variant: 'info',    label: 'Pending' },
 
-  open:        { variant: 'info',    label: 'Open' },
-  'in progress': { variant: 'warning', label: 'In progress' },
-  'in_progress': { variant: 'warning', label: 'In progress' },
-  done:        { variant: 'success', label: 'Done' },
+  'in progress': { variant: 'warning', label: 'In Progress' },
+  completed:     { variant: 'success', label: 'Completed' },
 };
 
 export interface StatusBadgeProps {
-  status: string;       // valoarea bruta primita de la backend
+  status: string;      
   className?: string;
 }
 

@@ -1,14 +1,15 @@
 import StatusBadge from '../../common/StatusBadge/StatusBadge.tsx';
 
-// (Provizoriu)
 export interface Meeting {
   id: string;
   title: string;
   description?: string;
-  date: string;            
-  status: string;          
-  attendeesCount: number;  
-  actionItemsCount: number;
+  startDateTime: string;   
+  endDateTime: string;
+  status: string;           // Upcoming / In Progress / Completed / Cancelled
+  aiStatus: string;         // Idle / Processing / Completed / Failed
+  attendeeIds: string[];  
+  actionItemsCount?: number;
 }
 
 export interface MeetingRowProps {
