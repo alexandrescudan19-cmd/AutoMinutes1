@@ -11,22 +11,22 @@ export type AttendeeDocument = HydratedDocument<Attendee>;
 
 @Schema({ timestamps: true })
 export class Attendee {
-  id: string;
+  id!: string;
 
   @Prop({ required: true, trim: true })
-  name: string;
+  name!: string;
 
   @Prop({ required: true, lowercase: true, trim: true })
-  email: string;
+  email!: string;
 
   @Prop({ required: true, trim: true })
-  roleInMeeting: string;
+  roleInMeeting!: string;
 
   @Prop({ enum: AttendanceStatus, default: AttendanceStatus.Invited })
-  attendanceStatus: AttendanceStatus;
+  attendanceStatus!: AttendanceStatus;
 
-  createdAt: string;
-  updatedAt: string;
+  createdAt!: string;
+  updatedAt!: string;
 }
 
 export const AttendeeSchema = SchemaFactory.createForClass(Attendee);

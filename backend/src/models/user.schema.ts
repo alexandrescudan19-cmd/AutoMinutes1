@@ -33,6 +33,12 @@ export class User {
   @Prop({ type: String, default: null })
   verificationToken!: string | null;
 
+  @Prop({ type: String, default: null })
+  resetPasswordToken!: string | null;
+
+  @Prop({ type: Date, default: null })
+  resetPasswordExpires!: Date | null;
+
   createdAt!: string;
   updatedAt!: string;
 }

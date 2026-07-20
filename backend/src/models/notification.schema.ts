@@ -5,22 +5,22 @@ export type NotificationDocument = HydratedDocument<Notification>;
 
 @Schema({ timestamps: true })
 export class Notification {
-  id: string;
+  id!: string;
 
   @Prop({ required: true, trim: true })
-  title: string;
+  title!: string;
 
   @Prop({ required: true })
-  message: string;
+  message!: string;
 
   @Prop({ required: true, trim: true })
-  type: string;
+  type!: string;
 
   @Prop({ default: Date.now })
-  sentAt: string;
+  sentAt!: string;
 
-  createdAt: string;
-  updatedAt: string;
+  createdAt!: string;
+  updatedAt!: string;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

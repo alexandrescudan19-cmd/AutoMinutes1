@@ -19,28 +19,28 @@ export type MeetingDocument = HydratedDocument<Meeting>;
 
 @Schema({ timestamps: true })
 export class Meeting {
-  id: string;
+  id!: string;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  ownerId: string;
+  ownerId!: string;
 
   @Prop({ required: true, trim: true })
-  title: string;
+  title!: string;
 
   @Prop({ type: String })
   description?: string;
 
   @Prop({ type: Date, required: true })
-  startDateTime: Date;
+  startDateTime!: Date;
 
   @Prop({ type: Date, required: true })
-  endDateTime: Date;
+  endDateTime!: Date;
 
   @Prop({ enum: MeetingStatus, default: MeetingStatus.Upcoming })
-  status: MeetingStatus;
+  status!: MeetingStatus;
 
   @Prop({ enum: AiStatus, default: AiStatus.Idle })
-  aiStatus: AiStatus;
+  aiStatus!: AiStatus;
 
   @Prop({ trim: true })
   googleMeetLink?: string;
@@ -55,16 +55,16 @@ export class Meeting {
   aiResultId?: string;
 
   @Prop({ type: [Types.ObjectId], ref: 'Attendee', default: [] })
-  attendeeIds: string[];
+  attendeeIds!: string[];
 
   @Prop({ type: [Types.ObjectId], ref: 'Invitation', default: [] })
-  invitationIds: string[];
+  invitationIds!: string[];
 
   @Prop({ type: [Types.ObjectId], ref: 'Notification', default: [] })
   notificationIds?: string[];
 
-  createdAt: string;
-  updatedAt: string;
+  createdAt!: string;
+  updatedAt!: string;
 }
 
 export const MeetingSchema = SchemaFactory.createForClass(Meeting);

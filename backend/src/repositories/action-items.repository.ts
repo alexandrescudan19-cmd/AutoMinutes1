@@ -1,0 +1,67 @@
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ActionItem, ActionItemDocument, ActionItemStatus } from '../models/action-item.schema';
+
+type CreateActionItemData = Omit<ActionItem, 'id' | 'createdAt' | 'updatedAt' | 'status'> & {
+  status?: ActionItemStatus;
+};
+
+@Injectable()
+export class ActionItemsRepository {
+  constructor(
+    @InjectModel(ActionItem.name) private readonly actionItemModel: Model<ActionItemDocument>,
+  ) {}
+
+  async create(data: CreateActionItemData): Promise<ActionItem> {
+    const actionItem = await this.actionItemModel.create({
+      status: data.status ?? ActionItemStatus.Pending,
+      ...data,
+    });
+    return this.toModel(actionItem);
+  }
+
+  async findAll(): Promise<ActionItem[]> {
+    const actionItems = await this.actionItemModel.find().exec();
+    return actionItems.map((actionItem) => this.toModel(actionItem));
+  }
+
+  async findOne(id: string): Promise<ActionItem | undefined> {
+    const actionItem = await this.actionItemModel.findById(id).exec();
+    return actionItem ? this.toModel(actionItem) : undefined;
+  }
+
+  async update(id: string, data: Partial<ActionItem>): Promise<ActionItem | undefined> {
+    const rest = { ...data };
+    delete rest.id;
+    const actionItem = await this.actionItemModel
+      .findByIdAndUpdate(id, this.withoutUndefined(rest), { returnDocument: 'after' })
+      .exec();
+    return actionItem ? this.toModel(actionItem) : undefined;
+  }
+
+  async remove(id: string): Promise<ActionItem | undefined> {
+    const actionItem = await this.actionItemModel.findByIdAndDelete(id).exec();
+    return actionItem ? this.toModel(actionItem) : undefined;
+  }
+
+  private toModel(document: ActionItemDocument): ActionItem {
+    return {
+      id: document._id.toString(),
+      aiResultId: document.aiResultId,
+      task: document.task,
+      responsiblePerson: document.responsiblePerson,
+      dueDate: document.dueDate,
+      status: document.status,
+      confidenceScore: document.confidenceScore,
+      createdAt: document.createdAt?.toString(),
+      updatedAt: document.updatedAt?.toString(),
+    };
+  }
+
+  private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(data).filter(([, value]) => value !== undefined),
+    ) as Partial<T>;
+  }
+}
