@@ -25,9 +25,11 @@ function toMeetingRowData(raw: RawMeeting): Meeting {
     id: raw.id,
     title: raw.title,
     description: raw.description,
-    date: raw.startDateTime,
+    startDateTime: raw.startDateTime,
+    endDateTime: raw.endDateTime,
     status: raw.aiStatus,
-    attendeesCount: raw.attendeeIds?.length ?? 0,
+    aiStatus: raw.aiStatus,
+    attendeeIds: raw.attendeeIds ?? [],
     actionItemsCount: 0, // TODO: cand exista endpoint pentru action items
   };
 }

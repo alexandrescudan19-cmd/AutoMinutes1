@@ -8,7 +8,7 @@ export interface Meeting {
   endDateTime: string;
   status: string;           // Upcoming / In Progress / Completed / Cancelled
   aiStatus: string;         // Idle / Processing / Completed / Failed
-  attendeeIds: string[];  
+  attendeeIds?: string[];
   actionItemsCount?: number;
 }
 
@@ -45,7 +45,7 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
       </div>
 
       <div className="hidden w-40 shrink-0 text-sm text-gray-600 sm:block">
-        {formatDate(meeting.date)}
+        {formatDate(meeting.startDateTime)}
       </div>
 
       <div className="w-28 shrink-0">
@@ -53,11 +53,11 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
       </div>
 
       <div className="hidden w-16 shrink-0 text-center text-sm text-gray-600 sm:block">
-        {meeting.attendeesCount}
+        {meeting.attendeeIds?.length ?? 0}
       </div>
 
       <div className="w-16 shrink-0 text-center text-sm text-gray-600">
-        {meeting.actionItemsCount}
+        {meeting.actionItemsCount ?? 0}
       </div>
     </button>
   );

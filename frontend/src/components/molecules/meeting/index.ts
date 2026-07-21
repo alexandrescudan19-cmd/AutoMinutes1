@@ -10,9 +10,6 @@ export type { StatCardProps } from './StatCard/StatCard.tsx';
 export { default as MeetingForm } from './MeetingForm/MeetingForm.tsx';
 export type { MeetingFormProps, MeetingFormValues } from './MeetingForm/MeetingForm.tsx';
 
-export { default as MeetingsHeader } from './MeetingsHeader/MeetingsHeader.tsx';
-export type { MeetingsHeaderProps, MeetingsStats } from './MeetingsHeader/MeetingsHeader.tsx';
-
 export { default as MeetingDetailsModal } from "./MeetingDetailsModal/MeetingDetailsModal.tsx";
 export type {
   MeetingDetails,
