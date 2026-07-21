@@ -19,4 +19,7 @@ export type { PasswordInputProps } from "./PasswordInput/PasswordInput.tsx";
 export { default as Card } from "./Card/Card.tsx";
 export * from "./Card/Card.tsx";
 
+export { default as Avatar } from "./Avatar/Avatar.tsx";
+export type { AvatarProps } from "./Avatar/Avatar.tsx";
+
 export { cn } from "./cn.ts";
