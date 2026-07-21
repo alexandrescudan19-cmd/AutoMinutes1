@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../../components/templates";
 import {
   MeetingList,
@@ -27,11 +27,19 @@ function toMeetingRowData(raw: RawMeeting): Meeting {
     description: raw.description,
     startDateTime: raw.startDateTime,
     endDateTime: raw.endDateTime,
-    status: raw.aiStatus,
+    status: raw.status,
     aiStatus: raw.aiStatus,
     attendeeIds: raw.attendeeIds ?? [],
     actionItemsCount: 0, // TODO: cand exista endpoint pentru action items
   };
+}
+
+function sortRawMeetings(meetings: RawMeeting[]) {
+  return [...meetings].sort(
+    (left, right) =>
+      new Date(right.startDateTime).getTime() -
+      new Date(left.startDateTime).getTime(),
+  );
 }
 
 export default function MeetingsPage() {
@@ -56,7 +64,8 @@ export default function MeetingsPage() {
     void fetchMeetings();
   }, []);
 
-  const meetings = rawMeetings.map(toMeetingRowData);
+  const sortedRawMeetings = useMemo(() => sortRawMeetings(rawMeetings), [rawMeetings]);
+  const meetings = sortedRawMeetings.map(toMeetingRowData);
   const processingCount = rawMeetings.filter(
     (m) => m.aiStatus === "Processing",
   ).length;
@@ -94,7 +103,7 @@ export default function MeetingsPage() {
           <MeetingList
             meetings={meetings}
             onSelect={(meeting) => {
-              const found = rawMeetings.find((m) => m.id === meeting.id);
+              const found = sortedRawMeetings.find((m) => m.id === meeting.id);
               setSelectedMeeting(found ?? null);
             }}
           />

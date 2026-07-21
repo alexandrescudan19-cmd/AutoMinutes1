@@ -9,6 +9,19 @@ export interface MeetingListProps {
   onSelect?: (meeting: Meeting) => void;   
 }
 
+function formatDate(raw: string): string {
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+
+  return date.toLocaleString('ro-RO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export default function MeetingList({ meetings, onSelect }: MeetingListProps) {
   const [query, setQuery] = useState('');
 
@@ -17,7 +30,11 @@ export default function MeetingList({ meetings, onSelect }: MeetingListProps) {
     ? meetings.filter(
         (m) =>
           m.title.toLowerCase().includes(q) ||
-          (m.description?.toLowerCase().includes(q) ?? false),
+          (m.description?.toLowerCase().includes(q) ?? false) ||
+          m.id.toLowerCase().includes(q) ||
+          m.status.toLowerCase().includes(q) ||
+          m.aiStatus.toLowerCase().includes(q) ||
+          formatDate(m.startDateTime).toLowerCase().includes(q),
       )
     : meetings;
 
