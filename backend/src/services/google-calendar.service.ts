@@ -20,19 +20,7 @@ interface CalendarEventResult {
 @Injectable()
 export class GoogleCalendarService {
   async createEvent(input: CreateCalendarEventInput): Promise<CalendarEventResult> {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_CALLBACK_URL;
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
-
-    if (!clientId || !clientSecret || !redirectUri || !refreshToken) {
-      throw new InternalServerErrorException('Google Calendar credentials are not configured.');
-    }
-
-    const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-    auth.setCredentials({ refresh_token: refreshToken });
-
-    const calendar = google.calendar({ version: 'v3', auth });
+    const calendar = this.createCalendarClient();
     const requestId = `autominutes-${Date.now()}`;
 
     let data;
@@ -80,6 +68,64 @@ export class GoogleCalendarService {
       eventId: data.id,
       meetLink: data.hangoutLink ?? undefined,
     };
+  }
+
+  async addAttendees(eventId: string, attendees: CreateCalendarEventInput['attendees']) {
+    if (!attendees?.length) {
+      return;
+    }
+
+    const calendar = this.createCalendarClient();
+
+    try {
+      const currentEvent = await calendar.events.get({
+        calendarId: process.env.GOOGLE_CALENDAR_ID ?? 'primary',
+        eventId,
+      });
+      const existingAttendees = currentEvent.data.attendees ?? [];
+      const existingEmails = new Set(
+        existingAttendees.map((attendee) => attendee.email?.toLowerCase().trim()).filter(Boolean),
+      );
+      const newAttendees = attendees
+        .filter((attendee) => !existingEmails.has(attendee.email.toLowerCase().trim()))
+        .map((attendee) => ({
+          email: attendee.email,
+          displayName: attendee.name,
+        }));
+
+      if (newAttendees.length === 0) {
+        return;
+      }
+
+      await calendar.events.patch({
+        calendarId: process.env.GOOGLE_CALENDAR_ID ?? 'primary',
+        eventId,
+        sendUpdates: 'all',
+        requestBody: {
+          attendees: [...existingAttendees, ...newAttendees],
+        },
+      });
+    } catch (error) {
+      const message = this.getGoogleErrorMessage(error) ?? 'Google Calendar request failed.';
+
+      throw new BadGatewayException(message);
+    }
+  }
+
+  private createCalendarClient() {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_CALLBACK_URL;
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+    if (!clientId || !clientSecret || !redirectUri || !refreshToken) {
+      throw new InternalServerErrorException('Google Calendar credentials are not configured.');
+    }
+
+    const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+    auth.setCredentials({ refresh_token: refreshToken });
+
+    return google.calendar({ version: 'v3', auth });
   }
 
   private getGoogleErrorMessage(error: unknown): string | undefined {

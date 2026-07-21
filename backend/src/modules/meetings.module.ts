@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MeetingsController } from '../controllers/meetings.controller';
 import { TranscriptsController } from '../controllers/transcripts.controller';
+import { AIResult, AIResultSchema } from '../models/ai-result.schema';
 import { Attendee, AttendeeSchema } from '../models/attendee.schema';
 import { Invitation, InvitationSchema } from '../models/invitation.schema';
 import { Meeting, MeetingSchema } from '../models/meeting.schema';
 import { Notification, NotificationSchema } from '../models/notification.schema';
 import { Transcript, TranscriptSchema } from '../models/transcript.schema';
 import { AttendeesRepository } from '../repositories/attendees.repository';
+import { AiResultsRepository } from '../repositories/ai-results.repository';
 import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
 import { NotificationsRepository } from '../repositories/notifications.repository';
@@ -15,6 +17,7 @@ import { TranscriptsRepository } from '../repositories/transcripts.repository';
 import { GoogleCalendarService } from '../services/google-calendar.service';
 import { GoogleMeetTranscriptService } from '../services/google-meet-transcript.service';
 import { MeetingsService } from '../services/meetings.service';
+import { TranscriptAutoImportService } from '../services/transcript-auto-import.service';
 
 @Module({
   imports: [
@@ -24,6 +27,7 @@ import { MeetingsService } from '../services/meetings.service';
       { name: Invitation.name, schema: InvitationSchema },
       { name: Notification.name, schema: NotificationSchema },
       { name: Transcript.name, schema: TranscriptSchema },
+      { name: AIResult.name, schema: AIResultSchema },
     ]),
   ],
   controllers: [MeetingsController, TranscriptsController],
@@ -32,7 +36,9 @@ import { MeetingsService } from '../services/meetings.service';
     MeetingsRepository,
     GoogleCalendarService,
     GoogleMeetTranscriptService,
+    TranscriptAutoImportService,
     AttendeesRepository,
+    AiResultsRepository,
     InvitationsRepository,
     NotificationsRepository,
     TranscriptsRepository,

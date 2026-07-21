@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CreateAttendeeDto } from '../dto/attendees/create-attendee.dto';
 import { UpdateAttendeeDto } from '../dto/attendees/update-attendee.dto';
@@ -6,6 +7,7 @@ import { AttendeesService } from '../services/attendees.service';
 
 @ApiTags('attendees')
 @Controller('attendees')
+@UseGuards(AuthGuard('jwt'))
 export class AttendeesController {
   constructor(private readonly attendeesService: AttendeesService) {}
 

@@ -1,7 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { AddMeetingInvitationsDto } from '../dto/meetings/add-meeting-invitations.dto';
 import { CreateMeetingDto } from '../dto/meetings/create-meeting.dto';
+import { MeetingHistoryQueryDto } from '../dto/meetings/meeting-history-query.dto';
 import { UpdateMeetingDto } from '../dto/meetings/update-meeting.dto';
 import { AuthenticatedUser, MeetingsService } from '../services/meetings.service';
 
@@ -25,6 +38,12 @@ export class MeetingsController {
   @Get()
   findAll(@Req() req: AuthenticatedRequest) {
     return this.meetingsService.findAll(req.user);
+  }
+
+  @ApiOperation({ summary: 'Listeaza history-ul sedintelor cu search, sortare si paginare' })
+  @Get('history')
+  findHistory(@Query() query: MeetingHistoryQueryDto, @Req() req: AuthenticatedRequest) {
+    return this.meetingsService.findHistory(req.user, query);
   }
 
   @ApiOperation({ summary: 'Listeaza invitatiile din aplicatie pentru un email' })
@@ -64,6 +83,17 @@ export class MeetingsController {
   @Post(':id/import-meet-transcript')
   importMeetTranscript(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.meetingsService.importMeetTranscript(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Trimite invitatii noi pentru o sedinta existenta' })
+  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
+  @Post(':id/invitations')
+  addInvitations(
+    @Param('id') id: string,
+    @Body() addMeetingInvitationsDto: AddMeetingInvitationsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.meetingsService.addInvitations(id, addMeetingInvitationsDto, req.user);
   }
 
   @ApiOperation({ summary: 'Sterge o sedinta' })

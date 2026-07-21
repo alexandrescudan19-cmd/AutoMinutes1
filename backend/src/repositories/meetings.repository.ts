@@ -60,6 +60,20 @@ export class MeetingsRepository {
       .exec();
   }
 
+  async findFinishedWithoutTranscript(now = new Date(), limit = 10): Promise<Meeting[]> {
+    const meetings = await this.meetingModel
+      .find({
+        endDateTime: { $lte: now },
+        status: { $ne: MeetingStatus.Cancelled },
+        googleMeetLink: { $exists: true, $ne: '' },
+        $or: [{ transcriptId: { $exists: false } }, { transcriptId: null }],
+      })
+      .sort({ endDateTime: 1 })
+      .limit(limit)
+      .exec();
+    return meetings.map((meeting) => this.toModel(meeting));
+  }
+
   async findOne(id: string): Promise<Meeting | undefined> {
     const meeting = await this.meetingModel.findById(id).exec();
     return meeting ? this.toModel(meeting) : undefined;
