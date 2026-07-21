@@ -1,8 +1,4 @@
-import {
-  BadGatewayException,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { google } from 'googleapis';
 
 interface CreateCalendarEventInput {
@@ -30,9 +26,7 @@ export class GoogleCalendarService {
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
     if (!clientId || !clientSecret || !redirectUri || !refreshToken) {
-      throw new InternalServerErrorException(
-        'Google Calendar credentials are not configured.',
-      );
+      throw new InternalServerErrorException('Google Calendar credentials are not configured.');
     }
 
     const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
@@ -73,8 +67,7 @@ export class GoogleCalendarService {
 
       data = response.data;
     } catch (error) {
-      const message =
-        this.getGoogleErrorMessage(error) ?? 'Google Calendar request failed.';
+      const message = this.getGoogleErrorMessage(error) ?? 'Google Calendar request failed.';
 
       throw new BadGatewayException(message);
     }
@@ -101,9 +94,7 @@ export class GoogleCalendarService {
     };
 
     return (
-      maybeError.response?.data?.error?.message ??
-      maybeError.cause?.message ??
-      maybeError.message
+      maybeError.response?.data?.error?.message ?? maybeError.cause?.message ?? maybeError.message
     );
   }
 }

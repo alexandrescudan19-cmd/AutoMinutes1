@@ -31,8 +31,33 @@ export class MeetingsRepository {
   }
 
   async findAll(): Promise<Meeting[]> {
-    const meetings = await this.meetingModel.find().exec();
+    const meetings = await this.meetingModel
+      .find()
+      .sort({ startDateTime: -1, createdAt: -1 })
+      .exec();
     return meetings.map((meeting) => this.toModel(meeting));
+  }
+
+  async findAccessible(ownerId: string, meetingIds: string[]): Promise<Meeting[]> {
+    const meetings = await this.meetingModel
+      .find({
+        $or: [{ ownerId }, { _id: { $in: meetingIds } }],
+      })
+      .sort({ startDateTime: -1, createdAt: -1 })
+      .exec();
+    return meetings.map((meeting) => this.toModel(meeting));
+  }
+
+  async completeFinishedMeetings(now = new Date()): Promise<void> {
+    await this.meetingModel
+      .updateMany(
+        {
+          endDateTime: { $lte: now },
+          status: { $nin: [MeetingStatus.Completed, MeetingStatus.Cancelled] },
+        },
+        { $set: { status: MeetingStatus.Completed } },
+      )
+      .exec();
   }
 
   async findOne(id: string): Promise<Meeting | undefined> {

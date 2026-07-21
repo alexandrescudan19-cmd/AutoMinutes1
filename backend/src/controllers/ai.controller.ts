@@ -1,10 +1,17 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
 import { AiService } from '../services/ai.service';
+import { AuthenticatedUser } from '../services/meetings.service';
+
+interface AuthenticatedRequest {
+  user: AuthenticatedUser;
+}
 
 @ApiTags('ai')
 @Controller('ai')
+@UseGuards(AuthGuard('jwt'))
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
@@ -16,8 +23,11 @@ export class AiController {
 
   @ApiOperation({ summary: 'Proceseaza transcriptul unei sedinte cu AI' })
   @Post('process-transcript')
-  processTranscript(@Body() processTranscriptDto: ProcessTranscriptDto) {
-    return this.aiService.processTranscript(processTranscriptDto);
+  processTranscript(
+    @Body() processTranscriptDto: ProcessTranscriptDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.aiService.processTranscript(processTranscriptDto, req.user);
   }
 
   @ApiOperation({ summary: 'Proceseaza un transcript complet trimis ca text simplu' })
@@ -38,12 +48,16 @@ export class AiController {
     @Body() transcript: string,
     @Query('language') language = 'ro',
     @Query('fileFormat') fileFormat = 'text',
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.aiService.processTranscript({
-      meetingId,
-      transcript,
-      fileFormat,
-      language,
-    });
+    return this.aiService.processTranscript(
+      {
+        meetingId,
+        transcript,
+        fileFormat,
+        language,
+      },
+      req.user,
+    );
   }
 }

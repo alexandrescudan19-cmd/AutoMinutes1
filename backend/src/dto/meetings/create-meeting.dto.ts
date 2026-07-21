@@ -79,15 +79,6 @@ export class CreateMeetingDto {
   })
   participants?: CreateMeetingParticipantDto[];
 
-  @ApiPropertyOptional({
-    example:
-      'Maria: Trebuie sa finalizam integrarea cu Google Meet. Alex: Ma ocup de transcript pana joi.',
-  })
-  transcript?: string;
-
-  @ApiPropertyOptional({ example: 'text' })
-  transcriptFileFormat?: string;
-
   @ApiPropertyOptional({ example: true })
   sendInAppInvitations?: boolean;
 }

@@ -18,6 +18,14 @@ import { ResetPasswordDto } from '@dto/auth/reset-password.dto';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 
+interface GoogleAuthRequest {
+  user: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -56,7 +64,7 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleCallback(@Req() req: any, @Res() res: Response) {
+  async googleCallback(@Req() req: GoogleAuthRequest, @Res() res: Response) {
     const { accessToken } = await this.authService.loginWithGoogle(req.user);
     res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?token=${accessToken}`);
   }

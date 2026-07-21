@@ -187,6 +187,8 @@ export class AuthService {
 
   private sanitize(user: User): Omit<User, 'passwordHash' | 'verificationToken'> {
     const { passwordHash, verificationToken, ...rest } = user;
+    void passwordHash;
+    void verificationToken;
     return rest;
   }
 }

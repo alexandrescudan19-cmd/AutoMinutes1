@@ -1,8 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  CreateMeetingDto,
-  CreateMeetingParticipantDto,
-} from '../dto/meetings/create-meeting.dto';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateMeetingDto, CreateMeetingParticipantDto } from '../dto/meetings/create-meeting.dto';
 import { UpdateMeetingDto } from '../dto/meetings/update-meeting.dto';
 import { AttendanceStatus } from '../models/attendee.schema';
 import { Invitation } from '../models/invitation.schema';
@@ -16,6 +13,12 @@ import { TranscriptsRepository } from '../repositories/transcripts.repository';
 import { GoogleCalendarService } from './google-calendar.service';
 import { GoogleMeetTranscriptService } from './google-meet-transcript.service';
 
+export interface AuthenticatedUser {
+  userId: string;
+  email: string;
+  role: string;
+}
+
 @Injectable()
 export class MeetingsService {
   constructor(
@@ -28,7 +31,7 @@ export class MeetingsService {
     private readonly googleMeetTranscriptService: GoogleMeetTranscriptService,
   ) {}
 
-  async create(createMeetingDto: CreateMeetingDto): Promise<Meeting> {
+  async create(createMeetingDto: CreateMeetingDto, user?: AuthenticatedUser): Promise<Meeting> {
     const startDateTime = new Date(createMeetingDto.startDateTime);
     const endDateTime = new Date(createMeetingDto.endDateTime);
     const participants = this.normalizeParticipants(createMeetingDto.participants);
@@ -51,6 +54,7 @@ export class MeetingsService {
 
     const meeting = await this.meetingsRepository.create({
       ...createMeetingDto,
+      ownerId: user?.userId ?? createMeetingDto.ownerId,
       startDateTime,
       endDateTime,
       googleCalendarEventId,
@@ -99,14 +103,6 @@ export class MeetingsService {
         )
       : [];
 
-    const transcript = createMeetingDto.transcript?.trim()
-      ? await this.transcriptsRepository.create({
-          meetingId: meeting.id,
-          content: createMeetingDto.transcript,
-          fileFormat: createMeetingDto.transcriptFileFormat ?? 'text',
-        })
-      : undefined;
-
     const updatedMeeting = await this.meetingsRepository.update(meeting.id, {
       attendeeIds: [
         ...(createMeetingDto.attendeeIds ?? []),
@@ -120,23 +116,43 @@ export class MeetingsService {
         ...(createMeetingDto.notificationIds ?? []),
         ...notifications.map((notification) => notification.id),
       ],
-      transcriptId: transcript?.id ?? createMeetingDto.transcriptId,
+      transcriptId: createMeetingDto.transcriptId,
     });
 
     return updatedMeeting ?? meeting;
   }
 
-  findAll(): Promise<Meeting[]> {
+  async findAll(user?: AuthenticatedUser): Promise<Meeting[]> {
+    await this.meetingsRepository.completeFinishedMeetings();
+    if (user) {
+      const invitations = await this.invitationsRepository.findByParticipantEmail(user.email);
+      return this.meetingsRepository.findAccessible(
+        user.userId,
+        invitations.map((invitation) => invitation.meetingId),
+      );
+    }
     return this.meetingsRepository.findAll();
   }
 
-  async findOne(id: string): Promise<Meeting> {
+  async findOne(id: string, user?: AuthenticatedUser): Promise<Meeting> {
+    await this.meetingsRepository.completeFinishedMeetings();
     const meeting = await this.meetingsRepository.findOne(id);
     if (!meeting) throw new NotFoundException(`Meeting #${id} not found`);
+    if (user) {
+      await this.assertCanAccessMeeting(meeting, user);
+    }
     return meeting;
   }
 
-  async update(id: string, updateMeetingDto: UpdateMeetingDto): Promise<Meeting> {
+  async update(
+    id: string,
+    updateMeetingDto: UpdateMeetingDto,
+    user?: AuthenticatedUser,
+  ): Promise<Meeting> {
+    if (user) {
+      await this.assertCanManageMeeting(id, user);
+    }
+
     const meeting = await this.meetingsRepository.update(id, {
       ...updateMeetingDto,
       startDateTime: updateMeetingDto.startDateTime
@@ -150,14 +166,22 @@ export class MeetingsService {
     return meeting;
   }
 
-  async remove(id: string): Promise<Meeting> {
+  async remove(id: string, user?: AuthenticatedUser): Promise<Meeting> {
+    if (user) {
+      await this.assertCanManageMeeting(id, user);
+    }
+
     const meeting = await this.meetingsRepository.remove(id);
     if (!meeting) throw new NotFoundException(`Meeting #${id} not found`);
     return meeting;
   }
 
-  async importMeetTranscript(id: string) {
-    const meeting = await this.findOne(id);
+  async importMeetTranscript(id: string, user?: AuthenticatedUser) {
+    await this.meetingsRepository.completeFinishedMeetings();
+    const meeting = await this.findOne(id, user);
+    if (user) {
+      await this.assertCanManageMeeting(id, user);
+    }
     if (!meeting.googleMeetLink) {
       throw new NotFoundException('Meeting-ul nu are Google Meet link salvat.');
     }
@@ -188,12 +212,24 @@ export class MeetingsService {
     };
   }
 
-  findInvitationsByEmail(email: string): Promise<Invitation[]> {
-    return this.invitationsRepository.findByParticipantEmail(email);
+  findInvitationsByEmail(email: string, user?: AuthenticatedUser): Promise<Invitation[]> {
+    this.assertOwnEmail(email, user);
+    return this.invitationsRepository.findByParticipantEmail(user?.email ?? email);
   }
 
-  findNotificationsByEmail(email: string): Promise<Notification[]> {
-    return this.notificationsRepository.findByRecipientEmail(email);
+  findNotificationsByEmail(email: string, user?: AuthenticatedUser): Promise<Notification[]> {
+    this.assertOwnEmail(email, user);
+    return this.notificationsRepository.findByRecipientEmail(user?.email ?? email);
+  }
+
+  async findTranscriptForMeetingUser(transcriptId: string, user: AuthenticatedUser) {
+    const transcript = await this.transcriptsRepository.findOne(transcriptId);
+    if (!transcript) {
+      throw new NotFoundException(`Transcript #${transcriptId} not found`);
+    }
+
+    await this.findOne(transcript.meetingId, user);
+    return transcript;
   }
 
   private normalizeParticipants(
@@ -218,5 +254,39 @@ export class MeetingsService {
     return googleMeetLink
       ? `Ai fost invitat la sedinta "${meeting.title}" pe ${start}. Link Meet: ${googleMeetLink}`
       : `Ai fost invitat la sedinta "${meeting.title}" pe ${start}.`;
+  }
+
+  private async assertCanAccessMeeting(meeting: Meeting, user: AuthenticatedUser): Promise<void> {
+    if (meeting.ownerId?.toString() === user.userId) {
+      return;
+    }
+
+    const invitations = await this.invitationsRepository.findByParticipantEmail(user.email);
+    const isInvited = invitations.some(
+      (invitation) => invitation.meetingId.toString() === meeting.id,
+    );
+    if (!isInvited) {
+      throw new ForbiddenException('Nu ai acces la acest meeting.');
+    }
+  }
+
+  private async assertCanManageMeeting(id: string, user: AuthenticatedUser): Promise<void> {
+    const meeting = await this.meetingsRepository.findOne(id);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${id} not found`);
+    }
+    if (meeting.ownerId?.toString() !== user.userId) {
+      throw new ForbiddenException('Doar creatorul meeting-ului poate modifica aceasta resursa.');
+    }
+  }
+
+  private assertOwnEmail(email: string, user?: AuthenticatedUser): void {
+    if (!user) {
+      return;
+    }
+
+    if (email.toLowerCase().trim() !== user.email.toLowerCase().trim()) {
+      throw new ForbiddenException('Nu poti vedea datele altui utilizator.');
+    }
   }
 }

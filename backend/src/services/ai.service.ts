@@ -9,8 +9,10 @@ import { ActionItemStatus } from '../models/action-item.schema';
 import { AiStatus } from '../models/meeting.schema';
 import { ActionItemsRepository } from '../repositories/action-items.repository';
 import { AiResultsRepository } from '../repositories/ai-results.repository';
+import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
 import { TranscriptsRepository } from '../repositories/transcripts.repository';
+import { AuthenticatedUser } from './meetings.service';
 import { OllamaService } from './ollama.service';
 
 interface AiTranscriptResult {
@@ -40,17 +42,21 @@ export class AiService {
     private readonly transcriptsRepository: TranscriptsRepository,
     private readonly aiResultsRepository: AiResultsRepository,
     private readonly actionItemsRepository: ActionItemsRepository,
+    private readonly invitationsRepository: InvitationsRepository,
   ) {}
 
   getStatus() {
     return { status: 'ok', service: 'ai-transcript', ollama: this.ollamaService.getInfo() };
   }
 
-  async processTranscript(processTranscriptDto: ProcessTranscriptDto) {
+  async processTranscript(processTranscriptDto: ProcessTranscriptDto, user?: AuthenticatedUser) {
     const { meetingId, language = 'ro' } = processTranscriptDto;
     const meeting = await this.meetingsRepository.findOne(meetingId);
     if (!meeting) {
       throw new NotFoundException(`Meeting #${meetingId} not found`);
+    }
+    if (user) {
+      await this.assertCanAccessMeeting(meeting, user);
     }
 
     const transcript = await this.resolveTranscript(processTranscriptDto);
@@ -238,5 +244,22 @@ ${transcript}
   private clampConfidence(confidenceScore?: number): number | undefined {
     if (confidenceScore === undefined) return undefined;
     return Math.min(1, Math.max(0, confidenceScore));
+  }
+
+  private async assertCanAccessMeeting(
+    meeting: { id: string; ownerId: string },
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    if (meeting.ownerId?.toString() === user.userId) {
+      return;
+    }
+
+    const invitations = await this.invitationsRepository.findByParticipantEmail(user.email);
+    const isInvited = invitations.some(
+      (invitation) => invitation.meetingId.toString() === meeting.id,
+    );
+    if (!isInvited) {
+      throw new NotFoundException(`Meeting #${meeting.id} not found`);
+    }
   }
 }
