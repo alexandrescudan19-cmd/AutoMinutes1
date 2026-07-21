@@ -32,6 +32,14 @@ export class InvitationsRepository {
     return invitations.map((invitation) => this.toModel(invitation));
   }
 
+  async findByParticipantEmail(email: string): Promise<Invitation[]> {
+    const invitations = await this.invitationModel
+      .find({ participantEmail: email.toLowerCase().trim() })
+      .sort({ sentAt: -1 })
+      .exec();
+    return invitations.map((invitation) => this.toModel(invitation));
+  }
+
   async findOne(id: string): Promise<Invitation | undefined> {
     const invitation = await this.invitationModel.findById(id).exec();
     return invitation ? this.toModel(invitation) : undefined;

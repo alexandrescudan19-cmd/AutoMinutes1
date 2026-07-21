@@ -1,6 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AiStatus, MeetingStatus } from '../../models/meeting.schema';
 
+export class CreateMeetingParticipantDto {
+  @ApiProperty({ example: 'Maria Ionescu' })
+  name!: string;
+
+  @ApiProperty({ example: 'maria.ionescu@example.com' })
+  email!: string;
+
+  @ApiPropertyOptional({ example: 'Frontend Developer' })
+  roleInMeeting?: string;
+}
+
 export class CreateMeetingDto {
   @ApiProperty({ example: '65f1a6a6f2c2a7b4f0e7a111' })
   ownerId!: string;
@@ -10,6 +21,9 @@ export class CreateMeetingDto {
 
   @ApiPropertyOptional({ example: 'Planificare task-uri pentru sprintul urmator.' })
   description?: string;
+
+  @ApiPropertyOptional({ example: true })
+  createGoogleCalendarEvent?: boolean;
 
   @ApiProperty({ example: '2026-07-20T10:00:00.000Z' })
   startDateTime!: string | Date;
@@ -52,4 +66,28 @@ export class CreateMeetingDto {
     type: [String],
   })
   notificationIds?: string[];
+
+  @ApiPropertyOptional({
+    type: [CreateMeetingParticipantDto],
+    example: [
+      {
+        name: 'Maria Ionescu',
+        email: 'maria.ionescu@example.com',
+        roleInMeeting: 'Frontend Developer',
+      },
+    ],
+  })
+  participants?: CreateMeetingParticipantDto[];
+
+  @ApiPropertyOptional({
+    example:
+      'Maria: Trebuie sa finalizam integrarea cu Google Meet. Alex: Ma ocup de transcript pana joi.',
+  })
+  transcript?: string;
+
+  @ApiPropertyOptional({ example: 'text' })
+  transcriptFileFormat?: string;
+
+  @ApiPropertyOptional({ example: true })
+  sendInAppInvitations?: boolean;
 }

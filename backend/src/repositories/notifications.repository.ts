@@ -26,6 +26,14 @@ export class NotificationsRepository {
     return notifications.map((notification) => this.toModel(notification));
   }
 
+  async findByRecipientEmail(email: string): Promise<Notification[]> {
+    const notifications = await this.notificationModel
+      .find({ recipientEmail: email.toLowerCase().trim() })
+      .sort({ sentAt: -1 })
+      .exec();
+    return notifications.map((notification) => this.toModel(notification));
+  }
+
   async findOne(id: string): Promise<Notification | undefined> {
     const notification = await this.notificationModel.findById(id).exec();
     return notification ? this.toModel(notification) : undefined;
@@ -51,6 +59,9 @@ export class NotificationsRepository {
       title: document.title,
       message: document.message,
       type: document.type,
+      recipientEmail: document.recipientEmail,
+      meetingId: document.meetingId,
+      isRead: document.isRead,
       sentAt: document.sentAt,
       createdAt: document.createdAt?.toString(),
       updatedAt: document.updatedAt?.toString(),

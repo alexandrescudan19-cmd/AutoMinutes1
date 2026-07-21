@@ -16,6 +16,15 @@ export class Notification {
   @Prop({ required: true, trim: true })
   type!: string;
 
+  @Prop({ required: true, lowercase: true, trim: true })
+  recipientEmail!: string;
+
+  @Prop({ trim: true })
+  meetingId?: string;
+
+  @Prop({ default: false })
+  isRead!: boolean;
+
   @Prop({ default: Date.now })
   sentAt!: string;
 
