@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { AppLayout } from "../../components/templates";
+import { useEffect, useState } from "react";
 import {
+  MeetingDetailsModal,
   MeetingList,
   StatCard,
-  MeetingDetailsModal,
   type Meeting,
 } from "../../components/molecules";
+import { AppLayout } from "../../components/templates";
 import { api } from "../../services/api";
 
 interface RawMeeting {
@@ -17,9 +17,17 @@ interface RawMeeting {
   status: string;
   aiStatus: string;
   attendeeIds: string[];
+  actionItemsCount: number;
 }
 
-// transforma forma bruta de la API in forma pe care o cere MeetingRow
+interface MeetingHistoryResponse {
+  items: RawMeeting[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+
 function toMeetingRowData(raw: RawMeeting): Meeting {
   return {
     id: raw.id,
@@ -30,48 +38,51 @@ function toMeetingRowData(raw: RawMeeting): Meeting {
     status: raw.status,
     aiStatus: raw.aiStatus,
     attendeeIds: raw.attendeeIds ?? [],
-    actionItemsCount: 0, // TODO: cand exista endpoint pentru action items
+    actionItemsCount: raw.actionItemsCount ?? 0,
   };
-}
-
-function sortRawMeetings(meetings: RawMeeting[]) {
-  return [...meetings].sort(
-    (left, right) =>
-      new Date(right.startDateTime).getTime() -
-      new Date(left.startDateTime).getTime(),
-  );
 }
 
 export default function MeetingsPage() {
   const [rawMeetings, setRawMeetings] = useState<RawMeeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedMeeting, setSelectedMeeting] = useState<RawMeeting | null>(
-    null,
-  );
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+  const [selectedMeeting, setSelectedMeeting] = useState<RawMeeting | null>(null);
 
   useEffect(() => {
     const fetchMeetings = async () => {
+      setIsLoading(true);
+      setError("");
+
       try {
-        const { data } = await api.get<RawMeeting[]>("/meetings");
-        setRawMeetings(data);
+        const { data } = await api.get<MeetingHistoryResponse>("/meetings/history", {
+          params: {
+            page,
+            pageSize: 10,
+            search: query || undefined,
+            sort: "newest",
+          },
+        });
+        setRawMeetings(data.items);
+        setTotal(data.total);
+        setPage(data.page);
+        setPageCount(data.pageCount);
       } catch {
-        setError("Nu am putut încărca ședințele. Încearcă din nou.");
+        setError("Nu am putut incarca sedintele. Incearca din nou.");
       } finally {
         setIsLoading(false);
       }
     };
-    void fetchMeetings();
-  }, []);
 
-  const sortedRawMeetings = useMemo(() => sortRawMeetings(rawMeetings), [rawMeetings]);
-  const meetings = sortedRawMeetings.map(toMeetingRowData);
-  const processingCount = rawMeetings.filter(
-    (m) => m.aiStatus === "Processing",
-  ).length;
-  const completedCount = rawMeetings.filter(
-    (m) => m.aiStatus === "Completed",
-  ).length;
+    void fetchMeetings();
+  }, [page, query]);
+
+  const meetings = rawMeetings.map(toMeetingRowData);
+  const processingCount = rawMeetings.filter((meeting) => meeting.aiStatus === "Processing").length;
+  const completedCount = rawMeetings.filter((meeting) => meeting.aiStatus === "Completed").length;
 
   return (
     <AppLayout>
@@ -79,41 +90,57 @@ export default function MeetingsPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Meetings</h1>
 
         <div className="flex gap-4">
-          <StatCard
-            label="Total meetings"
-            value={rawMeetings.length}
-            accent="gray"
-          />
-          <StatCard
-            label="AI processing"
-            value={processingCount}
-            accent="amber"
-          />
-          <StatCard
-            label="AI completed"
-            value={completedCount}
-            accent="green"
-          />
+          <StatCard label="Total meetings" value={total} accent="gray" />
+          <StatCard label="AI processing" value={processingCount} accent="amber" />
+          <StatCard label="AI completed" value={completedCount} accent="green" />
         </div>
 
-        {isLoading && <p className="text-sm text-gray-500">Se încarcă…</p>}
+        {isLoading && <p className="text-sm text-gray-500">Se incarca...</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         {!isLoading && !error && (
           <MeetingList
             meetings={meetings}
+            query={query}
+            onQueryChange={(nextQuery) => {
+              setQuery(nextQuery);
+              setPage(1);
+            }}
             onSelect={(meeting) => {
-              const found = sortedRawMeetings.find((m) => m.id === meeting.id);
+              const found = rawMeetings.find((rawMeeting) => rawMeeting.id === meeting.id);
               setSelectedMeeting(found ?? null);
             }}
           />
         )}
+
+        {!isLoading && !error && pageCount > 1 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
+            <span>
+              Pagina {page} din {pageCount}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                className="h-9 rounded-lg bg-gray-100 px-3 font-medium text-gray-800 disabled:opacity-50"
+              >
+                Inapoi
+              </button>
+              <button
+                type="button"
+                disabled={page === pageCount}
+                onClick={() => setPage((currentPage) => Math.min(pageCount, currentPage + 1))}
+                className="h-9 rounded-lg bg-gray-100 px-3 font-medium text-gray-800 disabled:opacity-50"
+              >
+                Inainte
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <MeetingDetailsModal
-        meeting={selectedMeeting}
-        onClose={() => setSelectedMeeting(null)}
-      />
+      <MeetingDetailsModal meeting={selectedMeeting} onClose={() => setSelectedMeeting(null)} />
     </AppLayout>
   );
 }

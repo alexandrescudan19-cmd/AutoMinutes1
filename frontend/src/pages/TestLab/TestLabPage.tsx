@@ -6,6 +6,7 @@ import {
   FiDownload,
   FiEdit3,
   FiFileText,
+  FiPlus,
   FiRefreshCw,
   FiSend,
   FiTrash2,
@@ -35,6 +36,15 @@ interface Meeting {
   attendeeIds?: string[];
   invitationIds?: string[];
   notificationIds?: string[];
+  actionItemsCount?: number;
+}
+
+interface MeetingHistoryResponse {
+  items: Meeting[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
 }
 
 interface Invitation {
@@ -78,6 +88,15 @@ interface AiResult {
 
 type HistorySort = "newest" | "oldest" | "status";
 
+interface MeetingParticipantInput {
+  name: string;
+  email: string;
+  roleInMeeting: string;
+}
+
+const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const HISTORY_PAGE_SIZE = 5;
+
 function toLocalDateTime(date: Date) {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
@@ -99,31 +118,89 @@ function defaultEndDateTime() {
   return toLocalDateTime(date);
 }
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function uniqueParticipants(participants: MeetingParticipantInput[]) {
+  const seen = new Set<string>();
+
+  return participants.filter((participant) => {
+    const email = participant.email.toLowerCase().trim();
+    if (seen.has(email)) return false;
+    seen.add(email);
+    return true;
+  });
+}
+
+function formatParticipantForText(participant: MeetingParticipantInput) {
+  const name = participant.name.trim();
+  const email = participant.email.toLowerCase().trim();
+  const role = participant.roleInMeeting.trim();
+
+  if (role && role !== "Participant") {
+    return `${name || email}, ${email}, ${role}`;
+  }
+
+  return name && name !== email ? `${name} <${email}>` : email;
+}
+
+function parseParticipantLine(line: string): MeetingParticipantInput[] {
+  const bracketMatch = line.match(/^(.*?)\s*<([^>]+)>$/);
+  if (bracketMatch && isValidEmail(bracketMatch[2])) {
+    const email = bracketMatch[2].trim().toLowerCase();
+    return [
+      {
+        name: bracketMatch[1].trim() || email,
+        email,
+        roleInMeeting: "Participant",
+      },
+    ];
+  }
+
+  const emails = Array.from(line.matchAll(EMAIL_PATTERN), (match) => match[0].toLowerCase());
+  if (emails.length > 1) {
+    return emails.map((email) => ({
+      name: email,
+      email,
+      roleInMeeting: "Participant",
+    }));
+  }
+
+  const [nameOrEmail, email, roleInMeeting] = line.split(",").map((part) => part.trim());
+  if (email && isValidEmail(email)) {
+    return [
+      {
+        name: nameOrEmail || email,
+        email: email.toLowerCase(),
+        roleInMeeting: roleInMeeting || "Participant",
+      },
+    ];
+  }
+
+  if (isValidEmail(nameOrEmail)) {
+    const normalizedEmail = nameOrEmail.toLowerCase();
+    return [
+      {
+        name: normalizedEmail,
+        email: normalizedEmail,
+        roleInMeeting: "Participant",
+      },
+    ];
+  }
+
+  return [];
+}
+
 function parseParticipants(raw: string) {
-  return raw
+  return uniqueParticipants(
+    raw
     .split(/\r?\n/)
+      .flatMap((line) => line.split(";"))
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => {
-      const bracketMatch = line.match(/^(.*?)\s*<([^>]+)>$/);
-      if (bracketMatch) {
-        return {
-          name: bracketMatch[1].trim() || bracketMatch[2].trim(),
-          email: bracketMatch[2].trim(),
-          roleInMeeting: "Participant",
-        };
-      }
-
-      const [nameOrEmail, email, roleInMeeting] = line
-        .split(",")
-        .map((part) => part.trim());
-
-      return {
-        name: email ? nameOrEmail : nameOrEmail,
-        email: email || nameOrEmail,
-        roleInMeeting: roleInMeeting || "Participant",
-      };
-    });
+      .flatMap(parseParticipantLine),
+  );
 }
 
 function formatDate(raw: string) {
@@ -137,48 +214,7 @@ function formatDate(raw: string) {
 
 function isMeetingFinished(meeting?: Meeting) {
   if (!meeting) return false;
-  return meeting.status === "Completed" || Date.now() >= new Date(meeting.endDateTime).getTime();
-}
-
-function sortMeetings(meetings: Meeting[], sort: HistorySort) {
-  const statusOrder: Record<string, number> = {
-    "In Progress": 0,
-    Upcoming: 1,
-    Completed: 2,
-    Cancelled: 3,
-  };
-
-  return [...meetings].sort((left, right) => {
-    if (sort === "status") {
-      const statusDiff =
-        (statusOrder[left.status] ?? 99) - (statusOrder[right.status] ?? 99);
-      if (statusDiff !== 0) return statusDiff;
-    }
-
-    const leftTime = new Date(left.startDateTime).getTime();
-    const rightTime = new Date(right.startDateTime).getTime();
-    return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
-  });
-}
-
-function filterMeetings(meetings: Meeting[], query: string) {
-  const search = query.trim().toLowerCase();
-  if (!search) return meetings;
-
-  return meetings.filter((meeting) =>
-    [
-      meeting.id,
-      meeting.title,
-      meeting.description,
-      meeting.status,
-      meeting.aiStatus,
-      meeting.transcriptId,
-      formatDate(meeting.startDateTime),
-      formatDate(meeting.endDateTime),
-    ]
-      .filter(Boolean)
-      .some((value) => value?.toLowerCase().includes(search)),
-  );
+  return meeting.status === "Completed";
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -210,6 +246,9 @@ export default function TestLabPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [historySort, setHistorySort] = useState<HistorySort>("newest");
   const [historySearch, setHistorySearch] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyPageCount, setHistoryPageCount] = useState(1);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState("");
@@ -228,6 +267,9 @@ export default function TestLabPage() {
   const [endDateTime, setEndDateTime] = useState(defaultEndDateTime);
   const [createGoogleMeet, setCreateGoogleMeet] = useState(true);
   const [participants, setParticipants] = useState(`${defaultEmail}`);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("Participant");
   const [aiTranscript, setAiTranscript] = useState(
     "Alex: Pregatesc integrarea cu Google Meet pana joi.\nMaria: Eu verific notificarile si invitatiile.",
   );
@@ -236,15 +278,13 @@ export default function TestLabPage() {
   const [meetingPatchStartDateTime, setMeetingPatchStartDateTime] = useState("");
   const [meetingPatchEndDateTime, setMeetingPatchEndDateTime] = useState("");
   const [meetingPatchStatus, setMeetingPatchStatus] = useState("Completed");
+  const [newInvitees, setNewInvitees] = useState("");
 
-  const sortedMeetings = useMemo(
-    () => sortMeetings(meetings, historySort),
-    [meetings, historySort],
-  );
-  const visibleMeetings = useMemo(
-    () => filterMeetings(sortedMeetings, historySearch),
-    [historySearch, sortedMeetings],
-  );
+  const parsedParticipants = useMemo(() => parseParticipants(participants), [participants]);
+  const parsedNewInvitees = useMemo(() => parseParticipants(newInvitees), [newInvitees]);
+  const safeHistoryPage = Math.min(historyPage, historyPageCount);
+  const visibleMeetings = meetings;
+  const paginatedMeetings = meetings;
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
   const selectedMeetingFinished = isMeetingFinished(selectedMeeting);
 
@@ -261,7 +301,14 @@ export default function TestLabPage() {
       ] =
         await Promise.all([
           api.get<string>("/"),
-          api.get<Meeting[]>("/meetings"),
+          api.get<MeetingHistoryResponse>("/meetings/history", {
+            params: {
+              page: historyPage,
+              pageSize: HISTORY_PAGE_SIZE,
+              search: historySearch || undefined,
+              sort: historySort,
+            },
+          }),
           api.get<Invitation[]>(
             `/meetings/invitations/email/${encodeURIComponent(lookupEmail)}`,
           ),
@@ -271,8 +318,11 @@ export default function TestLabPage() {
         ]);
 
       setBackendStatus(rootResponse.data || "OK");
-      const nextMeetings = sortMeetings(meetingsResponse.data, historySort);
+      const nextMeetings = meetingsResponse.data.items;
       setMeetings(nextMeetings);
+      setHistoryTotal(meetingsResponse.data.total);
+      setHistoryPageCount(meetingsResponse.data.pageCount);
+      setHistoryPage(meetingsResponse.data.page);
       setInvitations(invitationsResponse.data);
       setNotifications(notificationsResponse.data);
 
@@ -284,7 +334,7 @@ export default function TestLabPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [historySort, lookupEmail, selectedMeetingId]);
+  }, [historyPage, historySearch, historySort, lookupEmail, selectedMeetingId]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -321,6 +371,10 @@ export default function TestLabPage() {
         setError("Ora de final trebuie sa fie dupa ora de start.");
         return;
       }
+      if (participants.trim() && parsedParticipants.length === 0) {
+        setError("Adauga cel putin un email valid la participanti.");
+        return;
+      }
 
       const response = await api.post<Meeting>("/meetings", {
         ownerId: fallbackOwnerId,
@@ -330,17 +384,47 @@ export default function TestLabPage() {
         endDateTime: end.toISOString(),
         createGoogleCalendarEvent: createGoogleMeet,
         sendInAppInvitations: true,
-        participants: parseParticipants(participants),
+        participants: parsedParticipants,
       });
 
       setSelectedMeetingId(response.data.id);
-      setMessage(`Meeting creat: ${response.data.id}`);
+      setMessage(
+        [
+          `Meeting creat: ${response.data.id}`,
+          parsedParticipants.length
+            ? `Invitatii trimise catre: ${parsedParticipants
+                .map((participant) => participant.email)
+                .join(", ")}`
+            : "Meeting creat fara participanti invitati.",
+        ].join("\n"),
+      );
       await loadAll();
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, "Nu am putut crea meeting-ul."));
     } finally {
       setBusyAction("");
     }
+  };
+
+  const addParticipantBeforeCreate = () => {
+    const email = inviteEmail.toLowerCase().trim();
+    if (!isValidEmail(email)) {
+      setError("Introdu un email valid pentru invitat.");
+      return;
+    }
+
+    const participant = {
+      name: inviteName.trim() || email,
+      email,
+      roleInMeeting: inviteRole.trim() || "Participant",
+    };
+    const nextParticipants = uniqueParticipants([...parsedParticipants, participant]);
+
+    setParticipants(nextParticipants.map(formatParticipantForText).join("\n"));
+    setInviteName("");
+    setInviteEmail("");
+    setInviteRole("Participant");
+    setError("");
   };
 
   const runMeetTranscriptImport = useCallback(
@@ -380,34 +464,6 @@ export default function TestLabPage() {
     },
     [loadAll],
   );
-
-  useEffect(() => {
-    if (!selectedMeeting?.id || !selectedMeeting.googleMeetLink || selectedMeeting.transcriptId) {
-      return;
-    }
-
-    const tryImport = () => {
-      const meetingEnded = Date.now() >= new Date(selectedMeeting.endDateTime).getTime();
-      if (!meetingEnded) return;
-
-      setAutoImportStatus("Incerc import automat din Google Meet...");
-      void runMeetTranscriptImport(selectedMeeting.id, { silent: true });
-    };
-
-    const timeoutId = window.setTimeout(tryImport, 1_000);
-    const intervalId = window.setInterval(tryImport, 30_000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.clearInterval(intervalId);
-    };
-  }, [
-    runMeetTranscriptImport,
-    selectedMeeting?.endDateTime,
-    selectedMeeting?.googleMeetLink,
-    selectedMeeting?.id,
-    selectedMeeting?.transcriptId,
-  ]);
 
   const importMeetTranscript = async () => {
     if (!selectedMeetingId) return;
@@ -564,6 +620,45 @@ export default function TestLabPage() {
     }
   };
 
+  const sendAdditionalInvitations = async () => {
+    if (!selectedMeetingId) return;
+    setBusyAction("meeting-invite");
+    setError("");
+    setMessage("");
+
+    try {
+      if (newInvitees.trim() && parsedNewInvitees.length === 0) {
+        setError("Adauga cel putin un email valid pentru invitatii noi.");
+        return;
+      }
+
+      const response = await api.post(`/meetings/${selectedMeetingId}/invitations`, {
+        participants: parsedNewInvitees,
+      });
+      const invitedEmails =
+        response.data.invitations?.map((invitation: Invitation) => invitation.participantEmail) ??
+        [];
+      const skippedEmails = response.data.skippedEmails ?? [];
+
+      setMessage(
+        [
+          invitedEmails.length
+            ? `Invitatii noi trimise catre: ${invitedEmails.join(", ")}`
+            : "Nu s-au trimis invitatii noi.",
+          skippedEmails.length ? `Deja invitati: ${skippedEmails.join(", ")}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+      setNewInvitees("");
+      await loadAll();
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Nu am putut trimite invitatiile noi."));
+    } finally {
+      setBusyAction("");
+    }
+  };
+
   const refreshInvitations = async () => {
     setBusyAction("lookup");
     setError("");
@@ -613,7 +708,7 @@ export default function TestLabPage() {
             </div>
           </Card>
           <Card title="Meetings">
-            <p className="text-2xl font-semibold text-gray-900">{meetings.length}</p>
+            <p className="text-2xl font-semibold text-gray-900">{historyTotal}</p>
           </Card>
           <Card title="Invitatii">
             <p className="text-2xl font-semibold text-gray-900">{invitations.length}</p>
@@ -634,13 +729,14 @@ export default function TestLabPage() {
           </pre>
         )}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-          <Card title="1. Creeaza meeting complet">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+          <Card title="1. Creeaza meeting complet" className="min-w-0">
             <form className="grid gap-4" onSubmit={createMeeting}>
               <Input
                 label="Titlu"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
+                className="w-full"
                 required
               />
               <TextArea
@@ -649,12 +745,13 @@ export default function TestLabPage() {
                 onChange={(event) => setDescription(event.target.value)}
                 rows={2}
               />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                 <Input
                   label="Start"
                   type="datetime-local"
                   value={startDateTime}
                   onChange={(event) => setStartDateTime(event.target.value)}
+                  className="w-full"
                   required
                 />
                 <Input
@@ -662,16 +759,71 @@ export default function TestLabPage() {
                   type="datetime-local"
                   value={endDateTime}
                   onChange={(event) => setEndDateTime(event.target.value)}
+                  className="w-full"
                   required
                 />
               </div>
+              <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                <p className="text-sm font-medium text-gray-900">Invitat nou</p>
+                <div className="mt-3 grid min-w-0 gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
+                  <Input
+                    label="Nume"
+                    value={inviteName}
+                    onChange={(event) => setInviteName(event.target.value)}
+                    placeholder="Alex Popescu"
+                    className="w-full"
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(event) => setInviteEmail(event.target.value)}
+                    placeholder="alex@example.com"
+                    className="w-full"
+                  />
+                  <Input
+                    label="Rol"
+                    value={inviteRole}
+                    onChange={(event) => setInviteRole(event.target.value)}
+                    placeholder="Participant"
+                    className="w-full"
+                  />
+                  <Button
+                    type="button"
+                    className="self-end"
+                    variant="secondary"
+                    leftIcon={<FiPlus />}
+                    onClick={addParticipantBeforeCreate}
+                  >
+                    Adauga
+                  </Button>
+                </div>
+              </div>
               <TextArea
-                label="Participanti"
+                label="Lista invitati"
                 value={participants}
                 onChange={(event) => setParticipants(event.target.value)}
                 rows={4}
-                hint="Un participant pe linie: email simplu, Nume <email>, sau Nume, email, rol."
+                hint="Accepta email simplu, mai multe email-uri separate prin virgula/punct si virgula, Nume <email>, sau Nume, email, rol."
               />
+              <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-600">
+                <p className="font-medium text-gray-900">
+                  Invitatii pregatite: {parsedParticipants.length}
+                </p>
+                {parsedParticipants.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {parsedParticipants.map((participant) => (
+                      <Badge key={participant.email}>
+                        {participant.name} - {participant.email}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Adauga email-uri valide ca sa se creeze invitatii in aplicatie.
+                  </p>
+                )}
+              </div>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
@@ -687,14 +839,17 @@ export default function TestLabPage() {
             </form>
           </Card>
 
-          <div className="flex flex-col gap-5">
-            <Card title="2. Selecteaza meeting">
+          <div className="flex min-w-0 flex-col gap-5">
+            <Card title="2. Selecteaza meeting" className="min-w-0">
               <div className="grid gap-3">
                 <label className="grid gap-1 text-sm font-medium text-gray-700">
                   Sortare history
                   <select
                     value={historySort}
-                    onChange={(event) => setHistorySort(event.target.value as HistorySort)}
+                    onChange={(event) => {
+                      setHistorySort(event.target.value as HistorySort);
+                      setHistoryPage(1);
+                    }}
                     className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm"
                   >
                     <option value="newest">Cele mai noi primele</option>
@@ -704,7 +859,10 @@ export default function TestLabPage() {
                 </label>
                 <SearchBar
                   value={historySearch}
-                  onChange={setHistorySearch}
+                  onChange={(value) => {
+                    setHistorySearch(value);
+                    setHistoryPage(1);
+                  }}
                   placeholder="Cauta in history..."
                 />
                 <label className="grid gap-1 text-sm font-medium text-gray-700">
@@ -776,7 +934,7 @@ export default function TestLabPage() {
                   !selectedMeeting.transcriptId &&
                   autoImportStatus && (
                     <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                      Auto-import: {autoImportStatus}
+                      Transcript: {autoImportStatus}
                     </p>
                   )}
               </div>
@@ -785,10 +943,15 @@ export default function TestLabPage() {
             <Card title="4. Invitatii si notificari">
               <div className="grid gap-3">
                 <Input
-                  label="Email"
+                  label="Email cont curent"
                   value={lookupEmail}
                   onChange={(event) => setLookupEmail(event.target.value)}
+                  readOnly
                 />
+                <p className="text-xs text-gray-500">
+                  Aici vezi doar invitatiile primite de contul logat. Persoanele invitate le vad
+                  cand intra in aplicatie cu email-ul lor.
+                </p>
                 <Button
                   variant="secondary"
                   leftIcon={<FiBell />}
@@ -851,6 +1014,16 @@ export default function TestLabPage() {
               >
                 Ruleaza raw
               </Button>
+              {selectedMeeting?.aiStatus === "Failed" && (
+                <Button
+                  variant="danger"
+                  disabled={!selectedMeeting.transcriptId}
+                  isLoading={busyAction === "ai-attached"}
+                  onClick={processAttachedTranscript}
+                >
+                  Retry AI
+                </Button>
+              )}
             </div>
           </div>
         </Card>
@@ -977,6 +1150,36 @@ export default function TestLabPage() {
                   Delete
                 </Button>
               </div>
+              <div className="mt-2 border-t border-gray-100 pt-4">
+                <TextArea
+                  label="Invitatii noi"
+                  value={newInvitees}
+                  onChange={(event) => setNewInvitees(event.target.value)}
+                  rows={3}
+                  hint="Adauga email-uri noi pentru meeting-ul selectat. Persoanele deja invitate sunt sarite."
+                />
+                <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-600">
+                  <p className="font-medium text-gray-900">
+                    Invitatii noi pregatite: {parsedNewInvitees.length}
+                  </p>
+                  {parsedNewInvitees.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {parsedNewInvitees.map((participant) => (
+                        <Badge key={participant.email}>{participant.email}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  className="mt-3"
+                  leftIcon={<FiSend />}
+                  disabled={!selectedMeetingId || parsedNewInvitees.length === 0}
+                  isLoading={busyAction === "meeting-invite"}
+                  onClick={sendAdditionalInvitations}
+                >
+                  Trimite invitatii noi
+                </Button>
+              </div>
             </div>
           </Card>
         </div>
@@ -1005,7 +1208,10 @@ export default function TestLabPage() {
             <div className="flex max-h-96 flex-col gap-3 overflow-auto">
               <SearchBar
                 value={historySearch}
-                onChange={setHistorySearch}
+                onChange={(value) => {
+                  setHistorySearch(value);
+                  setHistoryPage(1);
+                }}
                 placeholder="Cauta dupa titlu, status, ID..."
               />
               {visibleMeetings.length === 0 ? (
@@ -1013,33 +1219,63 @@ export default function TestLabPage() {
                   Nu exista meeting-uri pentru cautarea curenta.
                 </p>
               ) : (
-                visibleMeetings.map((meeting) => (
-                  <button
-                    key={meeting.id}
-                    type="button"
-                    onClick={() => selectMeeting(meeting.id)}
-                    className="rounded-lg border border-gray-100 p-3 text-left hover:bg-gray-50"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-medium text-gray-900">{meeting.title}</p>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                        <StatusBadge status={meeting.status} />
-                        {meeting.aiStatus && meeting.aiStatus !== "Idle" && (
-                          <StatusBadge status={meeting.aiStatus} />
-                        )}
-                        {meeting.aiStatus === "Idle" && <Badge>AI idle</Badge>}
+                <>
+                  {paginatedMeetings.map((meeting) => (
+                    <button
+                      key={meeting.id}
+                      type="button"
+                      onClick={() => selectMeeting(meeting.id)}
+                      className="rounded-lg border border-gray-100 p-3 text-left hover:bg-gray-50"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-medium text-gray-900">{meeting.title}</p>
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          <StatusBadge status={meeting.status} />
+                          {meeting.aiStatus && meeting.aiStatus !== "Idle" && (
+                            <StatusBadge status={meeting.aiStatus} />
+                          )}
+                          {meeting.aiStatus === "Idle" && <Badge>AI idle</Badge>}
+                        </div>
                       </div>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {formatDate(meeting.startDateTime)}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {meeting.attendeeIds?.length ?? 0} participanti,{" "}
+                        {meeting.transcriptId ? "transcript atasat" : "fara transcript"},{" "}
+                        {isMeetingFinished(meeting) ? "meet incheiat" : "meet activ/programat"}
+                      </p>
+                    </button>
+                  ))}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-sm text-gray-600">
+                    <span>
+                      Pagina {safeHistoryPage} din {historyPageCount} ({historyTotal}{" "}
+                      rezultate)
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={safeHistoryPage === 1}
+                        onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
+                      >
+                        Inapoi
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={safeHistoryPage === historyPageCount}
+                        onClick={() =>
+                          setHistoryPage((page) => Math.min(historyPageCount, page + 1))
+                        }
+                      >
+                        Inainte
+                      </Button>
                     </div>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {formatDate(meeting.startDateTime)}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {meeting.attendeeIds?.length ?? 0} participanti,{" "}
-                      {meeting.transcriptId ? "transcript atasat" : "fara transcript"},{" "}
-                      {isMeetingFinished(meeting) ? "meet incheiat" : "meet activ/programat"}
-                    </p>
-                  </button>
-                ))
+                  </div>
+                </>
               )}
             </div>
           </Card>
