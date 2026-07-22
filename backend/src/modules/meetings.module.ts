@@ -18,6 +18,8 @@ import { GoogleCalendarService } from '../services/google-calendar.service';
 import { GoogleMeetTranscriptService } from '../services/google-meet-transcript.service';
 import { MeetingsService } from '../services/meetings.service';
 import { TranscriptAutoImportService } from '../services/transcript-auto-import.service';
+import { UsersModule } from './users.module';
+import { CryptoModule } from './crypto.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { TranscriptAutoImportService } from '../services/transcript-auto-import.
       { name: Transcript.name, schema: TranscriptSchema },
       { name: AIResult.name, schema: AIResultSchema },
     ]),
+    UsersModule,
+    CryptoModule,
   ],
   controllers: [MeetingsController, TranscriptsController],
   providers: [

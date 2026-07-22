@@ -47,13 +47,16 @@ interface ImportedMeetTranscript {
 export class GoogleMeetTranscriptService {
   private readonly baseUrl = 'https://meet.googleapis.com/v2';
 
-  async importTranscriptByMeetLink(meetLink: string): Promise<ImportedMeetTranscript> {
+  async importTranscriptByMeetLink(
+    meetLink: string,
+    refreshToken: string,
+  ): Promise<ImportedMeetTranscript> {
     const meetingCode = this.extractMeetingCode(meetLink);
     if (!meetingCode) {
       throw new NotFoundException('Nu am putut identifica meeting code din Google Meet link.');
     }
 
-    const accessToken = await this.getAccessToken();
+    const accessToken = await this.getAccessToken(refreshToken);
     const conferenceRecord = await this.findConferenceRecord(accessToken, meetingCode);
     const transcriptName = await this.findLatestTranscriptName(accessToken, conferenceRecord.name);
     const entries = await this.listTranscriptEntries(accessToken, transcriptName);
@@ -77,11 +80,10 @@ export class GoogleMeetTranscriptService {
     return match?.[1].toLowerCase();
   }
 
-  private async getAccessToken(): Promise<string> {
+  private async getAccessToken(refreshToken: string): Promise<string> {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = process.env.GOOGLE_CALLBACK_URL;
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
     if (!clientId || !clientSecret || !redirectUri || !refreshToken) {
       throw new InternalServerErrorException('Google credentials are not configured.');

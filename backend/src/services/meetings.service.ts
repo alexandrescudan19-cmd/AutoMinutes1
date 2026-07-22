@@ -22,8 +22,10 @@ import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
 import { NotificationsRepository } from '../repositories/notifications.repository';
 import { TranscriptsRepository } from '../repositories/transcripts.repository';
+import { UsersRepository } from '../repositories/users.repository';
 import { GoogleCalendarService } from './google-calendar.service';
 import { GoogleMeetTranscriptService } from './google-meet-transcript.service';
+import { EncryptionService } from './encryption.service';
 
 export interface AuthenticatedUser {
   userId: string;
@@ -48,6 +50,8 @@ export class MeetingsService {
     private readonly transcriptsRepository: TranscriptsRepository,
     private readonly googleMeetTranscriptService: GoogleMeetTranscriptService,
     private readonly aiResultsRepository: AiResultsRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async create(createMeetingDto: CreateMeetingDto, user?: AuthenticatedUser): Promise<Meeting> {
@@ -59,13 +63,18 @@ export class MeetingsService {
     let googleMeetLink = createMeetingDto.googleMeetLink;
 
     if (createMeetingDto.createGoogleCalendarEvent) {
-      const calendarEvent = await this.googleCalendarService.createEvent({
-        title: createMeetingDto.title,
-        description: createMeetingDto.description,
-        startDateTime,
-        endDateTime,
-        attendees: participants,
-      });
+      const ownerId = user?.userId ?? createMeetingDto.ownerId;
+      const refreshToken = await this.getOwnerRefreshToken(ownerId);
+      const calendarEvent = await this.googleCalendarService.createEvent(
+        {
+          title: createMeetingDto.title,
+          description: createMeetingDto.description,
+          startDateTime,
+          endDateTime,
+          attendees: participants,
+        },
+        refreshToken,
+      );
 
       googleCalendarEventId = calendarEvent.eventId;
       googleMeetLink = calendarEvent.meetLink;
@@ -251,8 +260,10 @@ export class MeetingsService {
       throw new NotFoundException('Meeting-ul nu are Google Meet link salvat.');
     }
 
+    const refreshToken = await this.getOwnerRefreshToken(meeting.ownerId);
     const importedTranscript = await this.googleMeetTranscriptService.importTranscriptByMeetLink(
       meeting.googleMeetLink,
+      refreshToken,
     );
 
     const transcript = await this.transcriptsRepository.create({
@@ -308,7 +319,12 @@ export class MeetingsService {
     }
 
     if (meeting.googleCalendarEventId) {
-      await this.googleCalendarService.addAttendees(meeting.googleCalendarEventId, newParticipants);
+      const refreshToken = await this.getOwnerRefreshToken(meeting.ownerId);
+      await this.googleCalendarService.addAttendees(
+        meeting.googleCalendarEventId,
+        newParticipants,
+        refreshToken,
+      );
     }
 
     const attendees = await Promise.all(
@@ -508,6 +524,17 @@ export class MeetingsService {
     if (meeting.ownerId?.toString() !== user.userId) {
       throw new ForbiddenException('Doar creatorul meeting-ului poate modifica aceasta resursa.');
     }
+  }
+
+  private async getOwnerRefreshToken(ownerId: string): Promise<string> {
+    const owner = ownerId ? await this.usersRepository.findOne(ownerId) : undefined;
+    if (!owner?.googleRefreshTokenEncrypted) {
+      throw new BadRequestException(
+        'Trebuie să conectezi contul Google din Setări înainte de a crea o întâlnire cu Google Meet.',
+      );
+    }
+
+    return this.encryptionService.decrypt(owner.googleRefreshTokenEncrypted);
   }
 
   private assertOwnEmail(email: string, user?: AuthenticatedUser): void {

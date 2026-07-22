@@ -14,6 +14,7 @@ import { ResetPasswordDto } from '@dto/auth/reset-password.dto';
 import { User } from '../models/user.schema';
 import { randomBytes } from 'crypto';
 import { MailService } from './mail.service';
+import { EncryptionService } from './encryption.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async register(dto: RegisterDto): Promise<Omit<User, 'passwordHash' | 'verificationToken'>> {
@@ -183,6 +185,26 @@ export class AuthService {
     });
 
     return { accessToken };
+  }
+
+  async connectGoogleAccount(userId: string, refreshToken?: string): Promise<void> {
+    if (!refreshToken) {
+      throw new BadRequestException(
+        'Google nu a returnat un refresh token. Deconectează accesul aplicației din contul tău Google și încearcă din nou.',
+      );
+    }
+
+    const encrypted = this.encryptionService.encrypt(refreshToken);
+    await this.usersRepository.update(userId, { googleRefreshTokenEncrypted: encrypted });
+  }
+
+  async getGoogleConnectionStatus(userId: string): Promise<{ connected: boolean }> {
+    const user = await this.usersRepository.findOne(userId);
+    return { connected: Boolean(user?.googleRefreshTokenEncrypted) };
+  }
+
+  async disconnectGoogleAccount(userId: string): Promise<void> {
+    await this.usersRepository.update(userId, { googleRefreshTokenEncrypted: null });
   }
 
   private sanitize(user: User): Omit<User, 'passwordHash' | 'verificationToken'> {

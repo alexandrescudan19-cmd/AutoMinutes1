@@ -19,8 +19,11 @@ interface CalendarEventResult {
 
 @Injectable()
 export class GoogleCalendarService {
-  async createEvent(input: CreateCalendarEventInput): Promise<CalendarEventResult> {
-    const calendar = this.createCalendarClient();
+  async createEvent(
+    input: CreateCalendarEventInput,
+    refreshToken: string,
+  ): Promise<CalendarEventResult> {
+    const calendar = this.createCalendarClient(refreshToken);
     const requestId = `autominutes-${Date.now()}`;
 
     let data;
@@ -70,12 +73,16 @@ export class GoogleCalendarService {
     };
   }
 
-  async addAttendees(eventId: string, attendees: CreateCalendarEventInput['attendees']) {
+  async addAttendees(
+    eventId: string,
+    attendees: CreateCalendarEventInput['attendees'],
+    refreshToken: string,
+  ) {
     if (!attendees?.length) {
       return;
     }
 
-    const calendar = this.createCalendarClient();
+    const calendar = this.createCalendarClient(refreshToken);
 
     try {
       const currentEvent = await calendar.events.get({
@@ -112,11 +119,10 @@ export class GoogleCalendarService {
     }
   }
 
-  private createCalendarClient() {
+  private createCalendarClient(refreshToken: string) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = process.env.GOOGLE_CALLBACK_URL;
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
     if (!clientId || !clientSecret || !redirectUri || !refreshToken) {
       throw new InternalServerErrorException('Google Calendar credentials are not configured.');

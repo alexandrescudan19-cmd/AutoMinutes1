@@ -13,12 +13,14 @@ type CreateUserData = Omit<
   | 'verificationToken'
   | 'resetPasswordToken'
   | 'resetPasswordExpires'
+  | 'googleRefreshTokenEncrypted'
 > & {
   role?: UserRole;
   isVerified?: boolean;
   verificationToken?: string | null;
   resetPasswordToken?: string | null;
   resetPasswordExpires?: string | null;
+  googleRefreshTokenEncrypted?: string | null;
 };
 
 @Injectable()
@@ -87,6 +89,7 @@ export class UsersRepository {
       verificationToken: document.verificationToken ?? null,
       resetPasswordToken: document.resetPasswordToken ?? null,
       resetPasswordExpires: document.resetPasswordExpires ?? null,
+      googleRefreshTokenEncrypted: document.googleRefreshTokenEncrypted ?? null,
       createdAt: document.createdAt?.toString(),
       updatedAt: document.updatedAt?.toString(),
     };
