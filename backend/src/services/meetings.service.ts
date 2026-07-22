@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AddMeetingInvitationsDto } from '../dto/meetings/add-meeting-invitations.dto';
+import { UpdateAttendeeDto } from '../dto/attendees/update-attendee.dto';
 import { CreateMeetingDto, CreateMeetingParticipantDto } from '../dto/meetings/create-meeting.dto';
 import {
   MeetingHistoryQueryDto,
@@ -14,7 +15,7 @@ import {
 import { UpdateMeetingDto } from '../dto/meetings/update-meeting.dto';
 import { AttendanceStatus } from '../models/attendee.schema';
 import { Invitation } from '../models/invitation.schema';
-import { Meeting, MeetingStatus } from '../models/meeting.schema';
+import { AiStatus, Meeting, MeetingStatus } from '../models/meeting.schema';
 import { Notification } from '../models/notification.schema';
 import { AttendeesRepository } from '../repositories/attendees.repository';
 import { AiResultsRepository } from '../repositories/ai-results.repository';
@@ -164,7 +165,11 @@ export class MeetingsService {
     const sort = query.sort ?? 'newest';
 
     const meetings = await this.findAccessibleMeetings(user);
-    const filteredMeetings = this.filterMeetings(meetings, search);
+    const filteredMeetings = this.filterMeetings(meetings, {
+      search,
+      status: query.status,
+      aiStatus: query.aiStatus,
+    });
     const sortedMeetings = this.sortMeetings(filteredMeetings, sort);
     const total = sortedMeetings.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -382,6 +387,64 @@ export class MeetingsService {
     };
   }
 
+  async findAttendeesForMeeting(id: string, user: AuthenticatedUser) {
+    const meeting = await this.findOne(id, user);
+
+    return Promise.all(
+      (meeting.attendeeIds ?? []).map(async (attendeeId) => {
+        const attendee = await this.attendeesRepository.findOne(attendeeId);
+        return attendee;
+      }),
+    ).then((attendees) => attendees.filter(Boolean));
+  }
+
+  async updateAttendeeForMeeting(
+    meetingId: string,
+    attendeeId: string,
+    updateAttendeeDto: UpdateAttendeeDto,
+    user: AuthenticatedUser,
+  ) {
+    const meeting = await this.findOne(meetingId, user);
+    await this.assertCanManageMeeting(meetingId, user);
+
+    if (!meeting.attendeeIds?.some((id) => id.toString() === attendeeId)) {
+      throw new NotFoundException(`Attendee #${attendeeId} not found for meeting #${meetingId}`);
+    }
+
+    const attendee = await this.attendeesRepository.update(attendeeId, {
+      ...updateAttendeeDto,
+      email: updateAttendeeDto.email?.toLowerCase().trim(),
+      name: updateAttendeeDto.name?.trim(),
+      roleInMeeting: updateAttendeeDto.roleInMeeting?.trim(),
+    });
+
+    if (!attendee) {
+      throw new NotFoundException(`Attendee #${attendeeId} not found`);
+    }
+
+    return attendee;
+  }
+
+  async removeAttendeeFromMeeting(meetingId: string, attendeeId: string, user: AuthenticatedUser) {
+    const meeting = await this.findOne(meetingId, user);
+    await this.assertCanManageMeeting(meetingId, user);
+
+    if (!meeting.attendeeIds?.some((id) => id.toString() === attendeeId)) {
+      throw new NotFoundException(`Attendee #${attendeeId} not found for meeting #${meetingId}`);
+    }
+
+    const attendee = await this.attendeesRepository.remove(attendeeId);
+    await this.meetingsRepository.update(meetingId, {
+      attendeeIds: meeting.attendeeIds.filter((id) => id.toString() !== attendeeId),
+    });
+
+    if (!attendee) {
+      throw new NotFoundException(`Attendee #${attendeeId} not found`);
+    }
+
+    return attendee;
+  }
+
   findInvitationsByEmail(email: string, user?: AuthenticatedUser): Promise<Invitation[]> {
     this.assertOwnEmail(email, user);
     return this.invitationsRepository.findByParticipantEmail(user?.email ?? email);
@@ -438,13 +501,24 @@ export class MeetingsService {
     );
   }
 
-  private filterMeetings(meetings: Meeting[], search?: string) {
-    if (!search) {
-      return meetings;
-    }
+  private filterMeetings(
+    meetings: Meeting[],
+    filters: { search?: string; status?: MeetingStatus; aiStatus?: AiStatus },
+  ) {
+    return meetings.filter((meeting) => {
+      if (filters.status && meeting.status !== filters.status) {
+        return false;
+      }
 
-    return meetings.filter((meeting) =>
-      [
+      if (filters.aiStatus && meeting.aiStatus !== filters.aiStatus) {
+        return false;
+      }
+
+      if (!filters.search) {
+        return true;
+      }
+
+      return [
         meeting.id,
         meeting.title,
         meeting.description,
@@ -456,8 +530,8 @@ export class MeetingsService {
         new Date(meeting.endDateTime).toLocaleString('ro-RO'),
       ]
         .filter(Boolean)
-        .some((value) => value?.toLowerCase().includes(search)),
-    );
+        .some((value) => value?.toLowerCase().includes(filters.search as string));
+    });
   }
 
   private sortMeetings(meetings: Meeting[], sort: MeetingHistorySort) {

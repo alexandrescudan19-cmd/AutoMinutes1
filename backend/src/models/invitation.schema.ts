@@ -14,7 +14,7 @@ export class Invitation {
   @Prop({ required: true, lowercase: true, trim: true })
   participantEmail!: string;
 
-  @Prop({ enum: AttendanceStatus, default: AttendanceStatus.Invited })
+  @Prop({ type: String, enum: AttendanceStatus, default: AttendanceStatus.Invited })
   invitationStatus!: AttendanceStatus;
 
   @Prop({ default: Date.now })

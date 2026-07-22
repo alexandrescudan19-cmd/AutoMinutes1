@@ -13,6 +13,7 @@ import {
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AddMeetingInvitationsDto } from '../dto/meetings/add-meeting-invitations.dto';
+import { UpdateAttendeeDto } from '../dto/attendees/update-attendee.dto';
 import { CreateMeetingDto } from '../dto/meetings/create-meeting.dto';
 import { MeetingHistoryQueryDto } from '../dto/meetings/meeting-history-query.dto';
 import { UpdateMeetingDto } from '../dto/meetings/update-meeting.dto';
@@ -94,6 +95,54 @@ export class MeetingsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.meetingsService.addInvitations(id, addMeetingInvitationsDto, req.user);
+  }
+
+  @ApiOperation({ summary: 'Listeaza participantii unei sedinte' })
+  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
+  @Get(':id/attendees')
+  findAttendees(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.meetingsService.findAttendeesForMeeting(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Adauga participanti intr-o sedinta existenta' })
+  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
+  @Post(':id/attendees')
+  addAttendees(
+    @Param('id') id: string,
+    @Body() addMeetingInvitationsDto: AddMeetingInvitationsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.meetingsService.addInvitations(id, addMeetingInvitationsDto, req.user);
+  }
+
+  @ApiOperation({ summary: 'Actualizeaza un participant dintr-o sedinta' })
+  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
+  @ApiParam({ name: 'attendeeId', description: 'ID-ul participantului' })
+  @Patch(':id/attendees/:attendeeId')
+  updateAttendee(
+    @Param('id') id: string,
+    @Param('attendeeId') attendeeId: string,
+    @Body() updateAttendeeDto: UpdateAttendeeDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.meetingsService.updateAttendeeForMeeting(
+      id,
+      attendeeId,
+      updateAttendeeDto,
+      req.user,
+    );
+  }
+
+  @ApiOperation({ summary: 'Sterge un participant dintr-o sedinta' })
+  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
+  @ApiParam({ name: 'attendeeId', description: 'ID-ul participantului' })
+  @Delete(':id/attendees/:attendeeId')
+  removeAttendee(
+    @Param('id') id: string,
+    @Param('attendeeId') attendeeId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.meetingsService.removeAttendeeFromMeeting(id, attendeeId, req.user);
   }
 
   @ApiOperation({ summary: 'Sterge o sedinta' })

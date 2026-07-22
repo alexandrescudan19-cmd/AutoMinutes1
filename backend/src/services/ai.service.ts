@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
+import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItem, ActionItemStatus } from '../models/action-item.schema';
 import { AiStatus, Meeting } from '../models/meeting.schema';
 import { ActionItemsRepository } from '../repositories/action-items.repository';
@@ -97,6 +98,36 @@ export class AiService {
       meetingTitle: meeting.title,
       actionItems: actionItems.map((actionItem) => this.withMeeting(actionItem, meeting)),
     };
+  }
+
+  async updateActionItem(
+    actionItemId: string,
+    updateActionItemDto: UpdateActionItemDto,
+    user: AuthenticatedUser,
+  ) {
+    const actionItem = await this.actionItemsRepository.findOne(actionItemId);
+    if (!actionItem?.aiResultId) {
+      throw new NotFoundException(`Action item #${actionItemId} not found`);
+    }
+
+    await this.getAccessibleAiResult(actionItem.aiResultId, user);
+
+    const updatedActionItem = await this.actionItemsRepository.update(actionItemId, {
+      ...updateActionItemDto,
+      task: updateActionItemDto.task?.trim(),
+      responsiblePerson: updateActionItemDto.responsiblePerson?.trim(),
+      dueDate:
+        updateActionItemDto.dueDate === null
+          ? undefined
+          : this.parseDueDate(updateActionItemDto.dueDate),
+      confidenceScore: this.clampConfidence(updateActionItemDto.confidenceScore),
+    });
+
+    if (!updatedActionItem) {
+      throw new NotFoundException(`Action item #${actionItemId} not found`);
+    }
+
+    return updatedActionItem;
   }
 
   async listActionItems(user: AuthenticatedUser, filters?: { status?: ActionItemStatus }) {

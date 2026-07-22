@@ -22,7 +22,7 @@ export class Attendee {
   @Prop({ required: true, trim: true })
   roleInMeeting!: string;
 
-  @Prop({ enum: AttendanceStatus, default: AttendanceStatus.Invited })
+  @Prop({ type: String, enum: AttendanceStatus, default: AttendanceStatus.Invited })
   attendanceStatus!: AttendanceStatus;
 
   createdAt!: string;

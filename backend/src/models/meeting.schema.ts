@@ -36,10 +36,10 @@ export class Meeting {
   @Prop({ type: Date, required: true })
   endDateTime!: Date;
 
-  @Prop({ enum: MeetingStatus, default: MeetingStatus.Upcoming })
+  @Prop({ type: String, enum: MeetingStatus, default: MeetingStatus.Upcoming })
   status!: MeetingStatus;
 
-  @Prop({ enum: AiStatus, default: AiStatus.Idle })
+  @Prop({ type: String, enum: AiStatus, default: AiStatus.Idle })
   aiStatus!: AiStatus;
 
   @Prop({ trim: true })

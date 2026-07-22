@@ -1,7 +1,22 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
+import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItemStatus } from '../models/action-item.schema';
 import { AiService } from '../services/ai.service';
 import { AuthenticatedUser } from '../services/meetings.service';
@@ -27,6 +42,17 @@ export class AiController {
   @Get('action-items')
   listActionItems(@Req() req: AuthenticatedRequest, @Query('status') status?: ActionItemStatus) {
     return this.aiService.listActionItems(req.user, { status });
+  }
+
+  @ApiOperation({ summary: 'Actualizeaza un action item extras de AI' })
+  @ApiParam({ name: 'id', description: 'ID-ul action item-ului' })
+  @Patch('action-items/:id')
+  updateActionItem(
+    @Param('id') id: string,
+    @Body() updateActionItemDto: UpdateActionItemDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.aiService.updateActionItem(id, updateActionItemDto, req.user);
   }
 
   @ApiOperation({ summary: 'Returneaza un AI result complet' })
@@ -93,6 +119,49 @@ export class AiController {
     @Query('fileFormat') fileFormat = 'text',
     @Req() req: AuthenticatedRequest,
   ) {
+    return this.aiService.processTranscript(
+      {
+        meetingId,
+        transcript,
+        fileFormat,
+        language,
+      },
+      req.user,
+    );
+  }
+
+  @ApiOperation({ summary: 'Proceseaza un transcript incarcat ca fisier text' })
+  @ApiConsumes('multipart/form-data')
+  @ApiQuery({ name: 'meetingId', description: 'ID-ul sedintei existente' })
+  @ApiQuery({ name: 'language', required: false, example: 'ro' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @Post('process-transcript/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  processUploadedTranscript(
+    @Query('meetingId') meetingId: string,
+    @Query('language') language = 'ro',
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile()
+    file?: { buffer?: Buffer; originalname?: string; mimetype?: string },
+  ) {
+    if (!file?.buffer) {
+      throw new BadRequestException('Incarca un fisier transcript in campul "file".');
+    }
+
+    const transcript = file.buffer.toString('utf8');
+    const fileFormat = file.originalname?.split('.').pop() || 'text';
+
     return this.aiService.processTranscript(
       {
         meetingId,

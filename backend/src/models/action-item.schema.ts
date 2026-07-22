@@ -25,7 +25,7 @@ export class ActionItem {
   @Prop({ type: Date })
   dueDate?: Date;
 
-  @Prop({ enum: ActionItemStatus, default: ActionItemStatus.Pending })
+  @Prop({ type: String, enum: ActionItemStatus, default: ActionItemStatus.Pending })
   status!: ActionItemStatus;
 
   @Prop({ type: Number, min: 0, max: 1 })
