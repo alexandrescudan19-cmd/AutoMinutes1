@@ -33,6 +33,7 @@ interface Meeting {
   aiStatus?: string;
   googleMeetLink?: string;
   transcriptId?: string;
+  aiResultId?: string;
   attendeeIds?: string[];
   invitationIds?: string[];
   notificationIds?: string[];
@@ -84,6 +85,53 @@ interface AiResult {
     processingStatus?: string;
   };
   actionItemIds?: string[];
+}
+
+interface AiSummaryResponse {
+  aiResultId: string;
+  meetingId: string;
+  summary: string;
+  generatedAt?: string;
+}
+
+interface AiKeyPointsResponse {
+  aiResultId: string;
+  meetingId: string;
+  keyPoints: string[];
+}
+
+interface AiDecisionsResponse {
+  aiResultId: string;
+  meetingId: string;
+  decisions: string[];
+}
+
+interface AiActionItem {
+  id: string;
+  task: string;
+  responsiblePerson: string;
+  dueDate?: string;
+  status: string;
+  confidenceScore?: number;
+  meetingId: string;
+  meetingTitle: string;
+}
+
+interface AiActionItemsResponse {
+  aiResultId: string;
+  meetingId: string;
+  meetingTitle: string;
+  actionItems: AiActionItem[];
+}
+
+type ProcessAiActionItem = Omit<AiActionItem, "meetingId" | "meetingTitle"> &
+  Partial<Pick<AiActionItem, "meetingId" | "meetingTitle">>;
+
+interface ProcessAiResponse extends AiResult {
+  meetingId?: string;
+  transcript?: Transcript;
+  aiResult?: AiResult;
+  actionItems?: ProcessAiActionItem[];
 }
 
 type HistorySort = "newest" | "oldest" | "status";
@@ -257,6 +305,10 @@ export default function TestLabPage() {
   const [error, setError] = useState("");
   const [viewedTranscript, setViewedTranscript] = useState<Transcript | null>(null);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  const [aiSummary, setAiSummary] = useState<AiSummaryResponse | null>(null);
+  const [aiKeyPoints, setAiKeyPoints] = useState<AiKeyPointsResponse | null>(null);
+  const [aiDecisions, setAiDecisions] = useState<AiDecisionsResponse | null>(null);
+  const [aiActionItems, setAiActionItems] = useState<AiActionItemsResponse | null>(null);
   const [autoImportStatus, setAutoImportStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [busyAction, setBusyAction] = useState("");
@@ -287,6 +339,47 @@ export default function TestLabPage() {
   const paginatedMeetings = meetings;
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
   const selectedMeetingFinished = isMeetingFinished(selectedMeeting);
+  const selectedAiResultId = selectedMeeting?.aiResultId ?? aiResult?.id;
+
+  const hydrateSeparateAiResults = (
+    responseData: ProcessAiResponse,
+    meeting?: Meeting,
+  ): AiResult => {
+    const result = responseData.aiResult ?? responseData;
+    const meetingId = responseData.meetingId ?? meeting?.id ?? "";
+    const meetingTitle = meeting?.title ?? "Meeting selectat";
+    const aiResultId = result.id ?? "";
+
+    if (aiResultId) {
+      setAiSummary({
+        aiResultId,
+        meetingId,
+        summary: result.summary ?? "",
+      });
+      setAiKeyPoints({
+        aiResultId,
+        meetingId,
+        keyPoints: result.keyPoints ?? [],
+      });
+      setAiDecisions({
+        aiResultId,
+        meetingId,
+        decisions: result.decisions ?? [],
+      });
+      setAiActionItems({
+        aiResultId,
+        meetingId,
+        meetingTitle,
+        actionItems: (responseData.actionItems ?? []).map((item) => ({
+          ...item,
+          meetingId: item.meetingId ?? meetingId,
+          meetingTitle: item.meetingTitle ?? meetingTitle,
+        })),
+      });
+    }
+
+    return result;
+  };
 
   const loadAll = useCallback(async () => {
     setIsLoading(true);
@@ -355,6 +448,11 @@ export default function TestLabPage() {
     setMeetingPatchEndDateTime(toLocalDateTime(new Date(meeting.endDateTime)));
     setMeetingPatchStatus(meeting.status);
     setViewedTranscript(null);
+    setAiResult(null);
+    setAiSummary(null);
+    setAiKeyPoints(null);
+    setAiDecisions(null);
+    setAiActionItems(null);
     setAutoImportStatus("");
   };
 
@@ -493,13 +591,13 @@ export default function TestLabPage() {
     setMessage("");
 
     try {
-      const response = await api.post("/ai/process-transcript", {
+      const response = await api.post<ProcessAiResponse>("/ai/process-transcript", {
         meetingId: selectedMeetingId,
         transcript: aiTranscript,
         fileFormat: "text",
         language: "ro",
       });
-      setAiResult(response.data.aiResult ?? response.data);
+      setAiResult(hydrateSeparateAiResults(response.data, selectedMeeting));
       setMessage("AI procesat din textul introdus manual.");
       await loadAll();
     } catch (requestError) {
@@ -516,12 +614,12 @@ export default function TestLabPage() {
     setMessage("");
 
     try {
-      const response = await api.post("/ai/process-transcript", {
+      const response = await api.post<ProcessAiResponse>("/ai/process-transcript", {
         meetingId: selectedMeeting.id,
         transcriptId: selectedMeeting.transcriptId,
         language: "ro",
       });
-      setAiResult(response.data.aiResult ?? response.data);
+      setAiResult(hydrateSeparateAiResults(response.data, selectedMeeting));
       setMessage("AI procesat automat din transcriptul atasat meeting-ului.");
       await loadAll();
     } catch (requestError) {
@@ -553,16 +651,80 @@ export default function TestLabPage() {
     setMessage("");
 
     try {
-      const response = await api.post(
+      const response = await api.post<ProcessAiResponse>(
         `/ai/process-transcript/raw?meetingId=${encodeURIComponent(selectedMeetingId)}&language=ro&fileFormat=text`,
         aiTranscript,
         { headers: { "Content-Type": "text/plain" } },
       );
-      setAiResult(response.data.aiResult ?? response.data);
+      setAiResult(hydrateSeparateAiResults(response.data, selectedMeeting));
       setMessage("AI raw procesat.");
       await loadAll();
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, "Nu am putut procesa transcriptul raw."));
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const loadSeparateAiResult = async (section: "summary" | "key-points" | "decisions" | "action-items") => {
+    if (!selectedAiResultId) return;
+    setBusyAction(`ai-${section}`);
+    setError("");
+    setMessage("");
+
+    try {
+      if (section === "summary") {
+        const response = await api.get<AiSummaryResponse>(`/ai/results/${selectedAiResultId}/summary`);
+        setAiSummary(response.data);
+      }
+      if (section === "key-points") {
+        const response = await api.get<AiKeyPointsResponse>(
+          `/ai/results/${selectedAiResultId}/key-points`,
+        );
+        setAiKeyPoints(response.data);
+      }
+      if (section === "decisions") {
+        const response = await api.get<AiDecisionsResponse>(
+          `/ai/results/${selectedAiResultId}/decisions`,
+        );
+        setAiDecisions(response.data);
+      }
+      if (section === "action-items") {
+        const response = await api.get<AiActionItemsResponse>(
+          `/ai/results/${selectedAiResultId}/action-items`,
+        );
+        setAiActionItems(response.data);
+      }
+      setMessage(`Sectiune AI incarcata separat: ${section}`);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Nu am putut incarca sectiunea AI."));
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const loadAllSeparateAiResults = async () => {
+    if (!selectedAiResultId) return;
+    setBusyAction("ai-separate-all");
+    setError("");
+    setMessage("");
+
+    try {
+      const [summaryResponse, keyPointsResponse, decisionsResponse, actionItemsResponse] =
+        await Promise.all([
+          api.get<AiSummaryResponse>(`/ai/results/${selectedAiResultId}/summary`),
+          api.get<AiKeyPointsResponse>(`/ai/results/${selectedAiResultId}/key-points`),
+          api.get<AiDecisionsResponse>(`/ai/results/${selectedAiResultId}/decisions`),
+          api.get<AiActionItemsResponse>(`/ai/results/${selectedAiResultId}/action-items`),
+        ]);
+
+      setAiSummary(summaryResponse.data);
+      setAiKeyPoints(keyPointsResponse.data);
+      setAiDecisions(decisionsResponse.data);
+      setAiActionItems(actionItemsResponse.data);
+      setMessage("Toate sectiunile AI au fost incarcate separat.");
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "Nu am putut incarca rezultatele AI separate."));
     } finally {
       setBusyAction("");
     }
@@ -885,6 +1047,7 @@ export default function TestLabPage() {
                     <p className="font-medium text-gray-900">{selectedMeeting.title}</p>
                     <p>ID: {selectedMeeting.id}</p>
                     <p>Transcript: {selectedMeeting.transcriptId ?? "neatasat"}</p>
+                    <p>AI result: {selectedMeeting.aiResultId ?? aiResult?.id ?? "neatasat"}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {selectedMeeting.googleMeetLink && !selectedMeetingFinished && (
                         <a
@@ -1086,6 +1249,123 @@ export default function TestLabPage() {
               Ruleaza AI manual sau automat ca sa vezi rezultatul structurat aici.
             </p>
           )}
+        </Card>
+
+        <Card title="Rezultate AI separate">
+          <div className="grid gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>AI result: {selectedAiResultId ?? "neatasat"}</Badge>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!selectedAiResultId}
+                isLoading={busyAction === "ai-separate-all"}
+                onClick={loadAllSeparateAiResults}
+              >
+                Incarca toate
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!selectedAiResultId}
+                isLoading={busyAction === "ai-summary"}
+                onClick={() => loadSeparateAiResult("summary")}
+              >
+                Summary
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!selectedAiResultId}
+                isLoading={busyAction === "ai-key-points"}
+                onClick={() => loadSeparateAiResult("key-points")}
+              >
+                Key points
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!selectedAiResultId}
+                isLoading={busyAction === "ai-decisions"}
+                onClick={() => loadSeparateAiResult("decisions")}
+              >
+                Decisions
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!selectedAiResultId}
+                isLoading={busyAction === "ai-action-items"}
+                onClick={() => loadSeparateAiResult("action-items")}
+              >
+                Action items
+              </Button>
+            </div>
+
+            {!selectedAiResultId && (
+              <p className="text-sm text-gray-500">
+                Ruleaza AI pe meeting-ul selectat sau selecteaza un meeting care are aiResultId.
+              </p>
+            )}
+
+            <div className="grid gap-4 xl:grid-cols-2">
+              <section className="rounded-lg border border-gray-100 p-3">
+                <h2 className="mb-2 text-base font-semibold text-gray-900">Summary separat</h2>
+                <p className="text-sm text-gray-700">
+                  {aiSummary?.summary ?? "Nu este incarcat inca."}
+                </p>
+              </section>
+
+              <section className="rounded-lg border border-gray-100 p-3">
+                <h2 className="mb-2 text-base font-semibold text-gray-900">Key points separat</h2>
+                {aiKeyPoints?.keyPoints.length ? (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+                    {aiKeyPoints.keyPoints.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">Nu sunt incarcate inca.</p>
+                )}
+              </section>
+
+              <section className="rounded-lg border border-gray-100 p-3">
+                <h2 className="mb-2 text-base font-semibold text-gray-900">Decisions separat</h2>
+                {aiDecisions?.decisions.length ? (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+                    {aiDecisions.decisions.map((decision) => (
+                      <li key={decision}>{decision}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">Nu sunt incarcate inca.</p>
+                )}
+              </section>
+
+              <section className="rounded-lg border border-gray-100 p-3">
+                <h2 className="mb-2 text-base font-semibold text-gray-900">Action items separat</h2>
+                {aiActionItems?.actionItems.length ? (
+                  <div className="grid gap-2">
+                    {aiActionItems.actionItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm md:grid-cols-[minmax(0,1fr)_130px_110px]"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900">{item.task}</p>
+                          <p className="text-xs text-gray-500">{item.meetingTitle}</p>
+                        </div>
+                        <span className="text-gray-700">{item.responsiblePerson}</span>
+                        <Badge>{item.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Nu sunt incarcate inca.</p>
+                )}
+              </section>
+            </div>
+          </div>
         </Card>
 
         <div className="grid gap-5 xl:grid-cols-2">

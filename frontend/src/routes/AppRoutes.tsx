@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import LoginPage from "../pages/Login/LoginPage";
 import RegisterPage from "../pages/Register/RegisterPage";
+import ActionItemsPage from "../pages/ActionItems/ActionItemsPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import MeetingsPage from "../pages/Meetings/MeetingsPage";
 import TestLabPage from "../pages/TestLab/TestLabPage";
@@ -25,6 +26,7 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
+        <Route path="/action-items" element={<ActionItemsPage />} />
         <Route path="/test-lab" element={<TestLabPage />} />
       </Route>
       <Route path="/" element={<Navigate to="dashboard" replace />} />
