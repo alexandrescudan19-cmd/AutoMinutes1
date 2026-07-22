@@ -39,6 +39,9 @@ export class User {
   @Prop({ type: Date, default: null })
   resetPasswordExpires!: Date | null;
 
+  @Prop({ type: String, default: null })
+  googleRefreshTokenEncrypted!: string | null;
+
   createdAt!: string;
   updatedAt!: string;
 }
