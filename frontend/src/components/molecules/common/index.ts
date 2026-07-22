@@ -12,3 +12,6 @@ export type { ConfirmDialogProps } from "./ConfirmDialog/ConfirmDialog.tsx";
 
 export { default as StatusBadge } from "./StatusBadge/StatusBadge.tsx";
 export type { StatusBadgeProps } from "./StatusBadge/StatusBadge.tsx";
+
+export { default as Tabs } from "./Tabs/Tabs.tsx";
+export type { TabsProps, TabItem } from "./Tabs/Tabs.tsx";

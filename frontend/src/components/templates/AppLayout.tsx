@@ -2,6 +2,8 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Avatar, Button } from "../atoms";
 import { Modal } from "../molecules";
+import { MeetingForm } from "../molecules";
+import { api } from "../../services/api";
 
 export interface AppLayoutProps {
   children: ReactNode;
@@ -161,6 +163,33 @@ function UserMenu() {
 export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);        
+
+  async function handleCreateMeeting(values: {           
+    title: string;
+    startDateTime: string;
+    endDateTime: string;
+    description: string;
+  }) {
+    setIsSaving(true);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") ?? "null");
+      await api.post("/meetings", {
+        ownerId: user?.id,
+        title: values.title,
+        description: values.description,
+        startDateTime: new Date(values.startDateTime).toISOString(),
+        endDateTime: new Date(values.endDateTime).toISOString(),
+      });
+      setIsNewMeetingOpen(false);
+      window.location.href = "/meetings";
+    } catch (err) {
+      console.error("Eroare la creare:", err);
+      alert("Nu am putut crea întâlnirea. Verifică consola.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -215,10 +244,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         onClose={() => setIsNewMeetingOpen(false)}
         title="New meeting"
       >
-        <p className="text-sm text-gray-500">
-          Formularul de creare ședință vine aici (titlu, dată/oră, descriere) —
-          încă neconstruit.
-        </p>
+          <MeetingForm
+            onSubmit={handleCreateMeeting}
+            onCancel={() => setIsNewMeetingOpen(false)}
+            isSubmitting={isSaving}
+          />
       </Modal>
     </div>
   );

@@ -5,35 +5,51 @@ import Button from '../../../atoms/Button/Button.tsx';
 
 export interface MeetingFormValues {
   title: string;
-  date: string;
+  startDateTime: string;
+  endDateTime: string;
   description: string;
 }
 
 export interface MeetingFormProps {
-  onSubmit: (values: MeetingFormValues) => void;  // ce se intampla la creare
-  onCancel: () => void;                            // ce se intampla la anulare
-  isSubmitting?: boolean;                          
+  onSubmit: (values: MeetingFormValues) => void;  
+  onCancel: () => void;                            
+  isSubmitting?: boolean;                         
 }
 
 export default function MeetingForm({ onSubmit, onCancel, isSubmitting = false }: MeetingFormProps) {
-    
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
+  const [startDateTime, setStartDateTime] = useState('');
+  const [endDateTime, setEndDateTime] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
   function handleSubmit() {
-
+ 
     if (!title.trim()) {
       setError('Titlul este obligatoriu.');
       return;
     }
-    if (!date) {
-      setError('Data este obligatorie.');
+    if (!startDateTime) {
+      setError('Data de început este obligatorie.');
       return;
     }
+    if (!endDateTime) {
+      setError('Data de sfârșit este obligatorie.');
+      return;
+    }
+
+    if (new Date(endDateTime) <= new Date(startDateTime)) {
+      setError('Sfârșitul trebuie să fie după început.');
+      return;
+    }
+
     setError('');
-    onSubmit({ title: title.trim(), date, description: description.trim() });
+    onSubmit({
+      title: title.trim(),
+      startDateTime,
+      endDateTime,
+      description: description.trim(),
+    });
   }
 
   return (
@@ -48,12 +64,21 @@ export default function MeetingForm({ onSubmit, onCancel, isSubmitting = false }
       />
 
       <Input
-        label="Dată și oră"
+        label="Început"
         required
         type="datetime-local"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        error={error && !date ? error : undefined}
+        value={startDateTime}
+        onChange={(e) => setStartDateTime(e.target.value)}
+        error={error && !startDateTime ? error : undefined}
+      />
+
+      <Input
+        label="Sfârșit"
+        required
+        type="datetime-local"
+        value={endDateTime}
+        onChange={(e) => setEndDateTime(e.target.value)}
+        error={error && !endDateTime ? error : undefined}
       />
 
       <TextArea
@@ -63,6 +88,11 @@ export default function MeetingForm({ onSubmit, onCancel, isSubmitting = false }
         placeholder="Conținut opțional"
         rows={3}
       />
+
+      {/* erorile care nu tin de un camp anume (ex: sfarsit inainte de inceput) */}
+      {error && title.trim() && startDateTime && endDateTime && (
+        <p className="text-sm text-red-600">{error}</p>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>
