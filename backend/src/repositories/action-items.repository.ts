@@ -26,6 +26,26 @@ export class ActionItemsRepository {
     return actionItems.map((actionItem) => this.toModel(actionItem));
   }
 
+  async findByAiResultId(aiResultId: string): Promise<ActionItem[]> {
+    const actionItems = await this.actionItemModel
+      .find({ aiResultId })
+      .sort({ status: 1, dueDate: 1, createdAt: -1 })
+      .exec();
+    return actionItems.map((actionItem) => this.toModel(actionItem));
+  }
+
+  async findByAiResultIds(aiResultIds: string[]): Promise<ActionItem[]> {
+    if (aiResultIds.length === 0) {
+      return [];
+    }
+
+    const actionItems = await this.actionItemModel
+      .find({ aiResultId: { $in: aiResultIds } })
+      .sort({ status: 1, dueDate: 1, createdAt: -1 })
+      .exec();
+    return actionItems.map((actionItem) => this.toModel(actionItem));
+  }
+
   async findOne(id: string): Promise<ActionItem | undefined> {
     const actionItem = await this.actionItemModel.findById(id).exec();
     return actionItem ? this.toModel(actionItem) : undefined;

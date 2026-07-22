@@ -5,8 +5,8 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
-import { ActionItemStatus } from '../models/action-item.schema';
-import { AiStatus } from '../models/meeting.schema';
+import { ActionItem, ActionItemStatus } from '../models/action-item.schema';
+import { AiStatus, Meeting } from '../models/meeting.schema';
 import { ActionItemsRepository } from '../repositories/action-items.repository';
 import { AiResultsRepository } from '../repositories/ai-results.repository';
 import { InvitationsRepository } from '../repositories/invitations.repository';
@@ -34,6 +34,11 @@ interface AiTranscriptResult {
   }>;
 }
 
+export interface ActionItemListItem extends ActionItem {
+  meetingId: string;
+  meetingTitle: string;
+}
+
 @Injectable()
 export class AiService {
   constructor(
@@ -47,6 +52,73 @@ export class AiService {
 
   getStatus() {
     return { status: 'ok', service: 'ai-transcript', ollama: this.ollamaService.getInfo() };
+  }
+
+  async getResult(aiResultId: string, user: AuthenticatedUser) {
+    const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
+    return aiResult;
+  }
+
+  async getSummary(aiResultId: string, user: AuthenticatedUser) {
+    const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
+    return {
+      aiResultId: aiResult.id,
+      meetingId: aiResult.meetingId,
+      summary: aiResult.summary,
+      generatedAt: aiResult.generatedAt,
+    };
+  }
+
+  async getKeyPoints(aiResultId: string, user: AuthenticatedUser) {
+    const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
+    return {
+      aiResultId: aiResult.id,
+      meetingId: aiResult.meetingId,
+      keyPoints: aiResult.keyPoints,
+    };
+  }
+
+  async getDecisions(aiResultId: string, user: AuthenticatedUser) {
+    const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
+    return {
+      aiResultId: aiResult.id,
+      meetingId: aiResult.meetingId,
+      decisions: aiResult.decisions,
+    };
+  }
+
+  async getActionItems(aiResultId: string, user: AuthenticatedUser) {
+    const { aiResult, meeting } = await this.getAccessibleAiResult(aiResultId, user);
+    const actionItems = await this.actionItemsRepository.findByAiResultId(aiResult.id);
+
+    return {
+      aiResultId: aiResult.id,
+      meetingId: meeting.id,
+      meetingTitle: meeting.title,
+      actionItems: actionItems.map((actionItem) => this.withMeeting(actionItem, meeting)),
+    };
+  }
+
+  async listActionItems(user: AuthenticatedUser, filters?: { status?: ActionItemStatus }) {
+    const meetings = await this.findAccessibleMeetings(user);
+    const meetingsByAiResultId = new Map(
+      meetings
+        .filter((meeting) => meeting.aiResultId)
+        .map((meeting) => [meeting.aiResultId as string, meeting]),
+    );
+    const actionItems = await this.actionItemsRepository.findByAiResultIds([
+      ...meetingsByAiResultId.keys(),
+    ]);
+    const filteredActionItems = filters?.status
+      ? actionItems.filter((actionItem) => actionItem.status === filters.status)
+      : actionItems;
+
+    return filteredActionItems
+      .map((actionItem) => {
+        const meeting = meetingsByAiResultId.get(actionItem.aiResultId ?? '');
+        return meeting ? this.withMeeting(actionItem, meeting) : undefined;
+      })
+      .filter((actionItem): actionItem is ActionItemListItem => Boolean(actionItem));
   }
 
   async processTranscript(processTranscriptDto: ProcessTranscriptDto, user?: AuthenticatedUser) {
@@ -244,6 +316,37 @@ ${transcript}
   private clampConfidence(confidenceScore?: number): number | undefined {
     if (confidenceScore === undefined) return undefined;
     return Math.min(1, Math.max(0, confidenceScore));
+  }
+
+  private async getAccessibleAiResult(aiResultId: string, user: AuthenticatedUser) {
+    const aiResult = await this.aiResultsRepository.findOne(aiResultId);
+    if (!aiResult) {
+      throw new NotFoundException(`AI result #${aiResultId} not found`);
+    }
+
+    const meeting = await this.meetingsRepository.findOne(aiResult.meetingId);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${aiResult.meetingId} not found`);
+    }
+
+    await this.assertCanAccessMeeting(meeting, user);
+    return { aiResult, meeting };
+  }
+
+  private async findAccessibleMeetings(user: AuthenticatedUser): Promise<Meeting[]> {
+    const invitations = await this.invitationsRepository.findByParticipantEmail(user.email);
+    return this.meetingsRepository.findAccessible(
+      user.userId,
+      invitations.map((invitation) => invitation.meetingId),
+    );
+  }
+
+  private withMeeting(actionItem: ActionItem, meeting: Meeting): ActionItemListItem {
+    return {
+      ...actionItem,
+      meetingId: meeting.id,
+      meetingTitle: meeting.title,
+    };
   }
 
   private async assertCanAccessMeeting(
