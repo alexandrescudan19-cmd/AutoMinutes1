@@ -18,7 +18,11 @@ export function useGoogleConnectionStatus() {
   }, []);
 
   useEffect(() => {
-    void refetch();
+    const timeoutId = window.setTimeout(() => {
+      void refetch();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [refetch]);
 
   return { connected, loading, refetch };

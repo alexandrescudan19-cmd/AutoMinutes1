@@ -4,7 +4,7 @@ import { MeetingsHeader } from "../../components/organisms/meeting";
 import { Card, Input, Select } from "../../components/atoms";
 import { AppLayout } from "../../components/templates";
 import { useMeetingsStore } from "../../stores/meetingsStore";
-import type { MeetingHistorySort, MeetingStatus } from "../../types";
+import type { AiStatus, MeetingHistorySort, MeetingStatus } from "../../types";
 
 const SORT_OPTIONS: { value: MeetingHistorySort; label: string }[] = [
   { value: "newest", label: "Cele mai noi" },
@@ -18,6 +18,13 @@ const STATUS_OPTIONS: { value: MeetingStatus; label: string }[] = [
   { value: "In Progress", label: "In Progress" },
   { value: "Completed", label: "Completed" },
   { value: "Cancelled", label: "Cancelled" },
+];
+
+const AI_STATUS_OPTIONS: { value: AiStatus; label: string }[] = [
+  { value: "Idle", label: "Idle" },
+  { value: "Processing", label: "Processing" },
+  { value: "Completed", label: "Completed" },
+  { value: "Failed", label: "Failed" },
 ];
 
 export default function MeetingsPage() {
@@ -72,6 +79,15 @@ export default function MeetingsPage() {
               value={filters.status ?? ""}
               onChange={(e) =>
                 setFilters({ status: (e.target.value || undefined) as MeetingStatus | undefined })
+              }
+            />
+            <Select
+              label="AI status"
+              options={AI_STATUS_OPTIONS}
+              placeholder="Toate"
+              value={filters.aiStatus ?? ""}
+              onChange={(e) =>
+                setFilters({ aiStatus: (e.target.value || undefined) as AiStatus | undefined })
               }
             />
             <Select

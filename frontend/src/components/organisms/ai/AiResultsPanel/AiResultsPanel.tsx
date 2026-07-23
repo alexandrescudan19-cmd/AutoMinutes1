@@ -35,9 +35,13 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
   }, []);
 
   useEffect(() => {
-    if (meeting.aiResultId) {
-      void loadResult(meeting.aiResultId);
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (meeting.aiResultId) {
+        void loadResult(meeting.aiResultId);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [meeting.aiResultId, loadResult]);
 
   const handleProcessed = (result: ProcessTranscriptResult) => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
 import { Button, Card, Select } from "../../components/atoms";
+import { MeetingDetailsModal } from "../../components/molecules";
 import { ActionItemList } from "../../components/organisms/action-item";
 import { AppLayout } from "../../components/templates";
 import { listActionItems } from "../../services/actionItems";
@@ -20,6 +21,7 @@ export default function ActionItemsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const assignees = useMemo(
@@ -55,7 +57,11 @@ export default function ActionItemsPage() {
   };
 
   useEffect(() => {
-    void loadActionItems();
+    const timeoutId = window.setTimeout(() => {
+      void loadActionItems();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   return (
@@ -105,10 +111,12 @@ export default function ActionItemsPage() {
               items={visibleActionItems}
               showMeetingTitle
               onChanged={() => void loadActionItems()}
+              onOpenMeeting={setSelectedMeetingId}
             />
           )}
         </Card>
       </div>
+      <MeetingDetailsModal meetingId={selectedMeetingId} onClose={() => setSelectedMeetingId(null)} />
     </AppLayout>
   );
 }

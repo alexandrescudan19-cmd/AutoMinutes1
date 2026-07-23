@@ -70,13 +70,17 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
   };
 
   useEffect(() => {
-    if (meetingId) {
-      setActiveTab("overview");
-      setIsEditing(false);
-      void refetchMeeting(meetingId);
-    } else {
-      setMeeting(null);
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (meetingId) {
+        setActiveTab("overview");
+        setIsEditing(false);
+        void refetchMeeting(meetingId);
+      } else {
+        setMeeting(null);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [meetingId]);
 
   const handleUpdate = async (values: {

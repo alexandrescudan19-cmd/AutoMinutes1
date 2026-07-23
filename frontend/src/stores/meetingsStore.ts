@@ -8,6 +8,7 @@ import {
 } from "../services/meetings";
 import type {
   CreateMeetingInput,
+  AiStatus,
   MeetingHistoryItem,
   MeetingHistorySort,
   MeetingStatus,
@@ -17,6 +18,7 @@ import type {
 interface MeetingsFilters {
   search: string;
   status?: MeetingStatus;
+  aiStatus?: AiStatus;
   sort: MeetingHistorySort;
 }
 
@@ -56,6 +58,7 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
         pageSize,
         search: filters.search || undefined,
         status: filters.status,
+        aiStatus: filters.aiStatus,
         sort: filters.sort,
       });
       set({

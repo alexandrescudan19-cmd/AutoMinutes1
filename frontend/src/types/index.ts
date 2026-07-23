@@ -40,6 +40,7 @@ export interface MeetingHistoryQuery {
   search?: string;
   sort?: MeetingHistorySort;
   status?: MeetingStatus;
+  aiStatus?: AiStatus;
   page?: number;
   pageSize?: number;
 }

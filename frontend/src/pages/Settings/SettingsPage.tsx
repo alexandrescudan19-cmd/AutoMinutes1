@@ -12,14 +12,18 @@ export default function SettingsPage() {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("googleConnected")) {
-      setMessage("Contul Google a fost conectat cu succes.");
-      void refetch();
-      setSearchParams({}, { replace: true });
-    } else if (searchParams.get("googleConnectError")) {
-      setMessage("Conectarea contului Google a eșuat. Încearcă din nou.");
-      setSearchParams({}, { replace: true });
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (searchParams.get("googleConnected")) {
+        setMessage("Contul Google a fost conectat cu succes.");
+        void refetch();
+        setSearchParams({}, { replace: true });
+      } else if (searchParams.get("googleConnectError")) {
+        setMessage("Conectarea contului Google a esuat. Incearca din nou.");
+        setSearchParams({}, { replace: true });
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [searchParams, setSearchParams, refetch]);
 
   const handleConnect = () => {
@@ -40,7 +44,7 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="text-xl font-semibold text-gray-900">Setări</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Setari</h1>
 
         {message && <p className="text-sm text-brand">{message}</p>}
 
@@ -48,12 +52,12 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-gray-700">
-                Conectează-ți contul Google pentru ca ședințele pe care le creezi
-                să apară pe propriul tău calendar, cu tine ca organizator.
+                Conecteaza-ti contul Google pentru ca sedintele pe care le creezi sa apara
+                pe propriul tau calendar, cu tine ca organizator.
               </p>
               <div className="mt-2">
                 {loading ? (
-                  <Badge variant="neutral">Se verifică...</Badge>
+                  <Badge variant="neutral">Se verifica...</Badge>
                 ) : connected ? (
                   <Badge variant="success">Conectat</Badge>
                 ) : (
@@ -67,10 +71,10 @@ export default function SettingsPage() {
                 isLoading={isDisconnecting}
                 onClick={() => void handleDisconnect()}
               >
-                Deconectează
+                Deconecteaza
               </Button>
             ) : (
-              <Button onClick={handleConnect}>Conectează Google Calendar</Button>
+              <Button onClick={handleConnect}>Conecteaza Google Calendar</Button>
             )}
           </div>
         </Card>

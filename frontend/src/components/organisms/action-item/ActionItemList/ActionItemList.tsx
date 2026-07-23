@@ -10,6 +10,7 @@ export interface ActionItemListProps {
   items: (ActionItem | ActionItemListItem)[];
   showMeetingTitle?: boolean;
   onChanged: () => void;
+  onOpenMeeting?: (meetingId: string) => void;
 }
 
 const STATUS_GROUPS: { key: ActionItemStatus | "Unknown"; label: string }[] = [
@@ -68,6 +69,7 @@ export default function ActionItemList({
   items,
   showMeetingTitle = false,
   onChanged,
+  onOpenMeeting,
 }: ActionItemListProps) {
   const [editingId, setEditingId] = useState("");
   const [editTask, setEditTask] = useState("");
@@ -255,6 +257,16 @@ export default function ActionItemList({
                   </div>
                   <Badge variant={statusVariant(item.status)}>{item.status}</Badge>
                   <div className="flex gap-1">
+                    {showMeetingTitle && hasMeetingTitle(item) && onOpenMeeting && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onOpenMeeting(item.meetingId)}
+                      >
+                        Open
+                      </Button>
+                    )}
                     <button
                       type="button"
                       onClick={() => startEditing(item)}

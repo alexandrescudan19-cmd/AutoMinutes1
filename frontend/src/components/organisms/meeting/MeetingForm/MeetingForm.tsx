@@ -136,7 +136,7 @@ export default function MeetingForm({
             placeholder="Sprint planning"
           />
 
-          {/* CÂMPUL DE DESCRIERE CU LIMITĂ ȘI CONTOR */}
+          {/* Campul de descriere cu limita si contor. */}
           <div className="flex flex-col gap-1">
             <TextArea
               label="Description"
