@@ -223,7 +223,7 @@ export default function ActionItemList({
                 <div
                   key={item.id}
                   className={`grid items-center gap-3 rounded-lg border bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] ${
-                    overdue ? "border-l-4 border-red-300 border-l-red-500" : "border-gray-200"
+                    overdue ? "border-red-400" : "border-gray-200"
                   }`}
                 >
                   <input

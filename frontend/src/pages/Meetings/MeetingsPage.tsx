@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MeetingDetailsModal, MeetingList } from "../../components/molecules";
+import { MeetingDetailsModal, MeetingList, SearchBar } from "../../components/molecules";
 import { MeetingsHeader } from "../../components/organisms/meeting";
 import { Card, Input, Select } from "../../components/atoms";
 import { AppLayout } from "../../components/templates";
@@ -60,6 +60,11 @@ export default function MeetingsPage() {
 
         <Card>
           <div className="flex flex-wrap items-end gap-3">
+            <SearchBar
+              className="w-56"
+              value={filters.search}
+              onChange={(nextQuery) => setFilters({ search: nextQuery })}
+            />
             <Select
               label="Status"
               options={STATUS_OPTIONS}
@@ -106,7 +111,6 @@ export default function MeetingsPage() {
           <MeetingList
             meetings={visibleMeetings}
             query={filters.search}
-            onQueryChange={(nextQuery) => setFilters({ search: nextQuery })}
             onSelect={(meeting) => setSelectedMeetingId(meeting.id)}
           />
         )}

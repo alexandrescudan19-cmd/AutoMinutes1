@@ -1,29 +1,16 @@
 import { FiInbox } from 'react-icons/fi';
 import EmptyState from '../../common/EmptyState/EmptyState.tsx';
-import SearchBar from '../../common/SearchBar/SearchBar.tsx';
 import MeetingRow, { type Meeting } from '../MeetingRow/MeetingRow.tsx';
 
 export interface MeetingListProps {
   meetings: Meeting[];
   onSelect?: (meeting: Meeting) => void;
   query?: string;
-  onQueryChange?: (query: string) => void;
 }
 
-export default function MeetingList({
-  meetings,
-  onSelect,
-  query = '',
-  onQueryChange,
-}: MeetingListProps) {
+export default function MeetingList({ meetings, onSelect, query = '' }: MeetingListProps) {
   return (
     <div className="flex flex-col gap-4">
-      <SearchBar
-        value={query}
-        onChange={onQueryChange ?? (() => undefined)}
-        placeholder="Cauta intalniri..."
-      />
-
       {meetings.length === 0 ? (
         <EmptyState
           icon={<FiInbox />}

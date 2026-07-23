@@ -126,7 +126,7 @@ export default function MeetingForm({
 
   return (
     <form className="flex flex-col" onSubmit={(e) => void handleSubmit(e)}>
-      <div className="flex max-h-[60vh] flex-col gap-6 overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-400">
+      <div className="flex max-h-[60vh] flex-col gap-6 overflow-y-auto pr-2">
         <div className="flex flex-col gap-4">
           <Input
             label="Title"
