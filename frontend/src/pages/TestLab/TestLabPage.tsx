@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   FiBell,
   FiCheckCircle,
@@ -14,6 +15,7 @@ import {
 import { Badge, Button, Card, Input, TextArea } from "../../components/atoms";
 import { SearchBar, StatusBadge } from "../../components/molecules/common";
 import { AppLayout } from "../../components/templates";
+import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
 import { api } from "../../services/api";
 
 interface StoredUser {
@@ -312,6 +314,8 @@ export default function TestLabPage() {
   const [autoImportStatus, setAutoImportStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [busyAction, setBusyAction] = useState("");
+  const { connected: googleConnected, loading: googleStatusLoading } =
+    useGoogleConnectionStatus();
 
   const [title, setTitle] = useState("Test Google Meet transcript");
   const [description, setDescription] = useState("Meeting creat din pagina de test.");
@@ -989,12 +993,22 @@ export default function TestLabPage() {
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
-                  checked={createGoogleMeet}
+                  checked={createGoogleMeet && googleConnected}
+                  disabled={!googleConnected || googleStatusLoading}
                   onChange={(event) => setCreateGoogleMeet(event.target.checked)}
                   className="h-4 w-4"
                 />
                 Creeaza eveniment Calendar + Google Meet link
               </label>
+              {!googleStatusLoading && !googleConnected && (
+                <p className="text-xs text-amber-600">
+                  Trebuie să conectezi contul Google din{" "}
+                  <Link to="/settings" className="link-underline">
+                    Setări
+                  </Link>{" "}
+                  ca să poți crea evenimente Google Meet.
+                </p>
+              )}
               <Button type="submit" leftIcon={<FiSend />} isLoading={busyAction === "create"}>
                 Creeaza si verifica
               </Button>

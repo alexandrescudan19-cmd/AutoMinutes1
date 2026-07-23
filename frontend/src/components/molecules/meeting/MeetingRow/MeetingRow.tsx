@@ -1,20 +1,11 @@
 import StatusBadge from '../../common/StatusBadge/StatusBadge.tsx';
+import type { MeetingHistoryItem } from '../../../../types';
 
-export interface Meeting {
-  id: string;
-  title: string;
-  description?: string;
-  startDateTime: string;   
-  endDateTime: string;
-  status: string;           // Upcoming / In Progress / Completed / Cancelled
-  aiStatus: string;         // Idle / Processing / Completed / Failed
-  attendeeIds?: string[];
-  actionItemsCount?: number;
-}
+export type Meeting = MeetingHistoryItem;
 
 export interface MeetingRowProps {
   meeting: Meeting;
-  onClick?: (meeting: Meeting) => void;  
+  onClick?: (meeting: Meeting) => void;
 }
 
 // Transforma data bruta 

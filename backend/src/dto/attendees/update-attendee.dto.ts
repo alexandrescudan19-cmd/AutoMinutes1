@@ -1,16 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { AttendanceStatus } from '../../models/attendee.schema';
+import { PartialType } from '@nestjs/swagger';
+import { CreateAttendeeDto } from './create-attendee.dto';
 
-export class UpdateAttendeeDto {
-  @ApiPropertyOptional({ example: 'Maria Ionescu' })
-  name?: string;
-
-  @ApiPropertyOptional({ example: 'maria.ionescu@example.com' })
-  email?: string;
-
-  @ApiPropertyOptional({ example: 'Frontend Developer' })
-  roleInMeeting?: string;
-
-  @ApiPropertyOptional({ enum: AttendanceStatus, example: AttendanceStatus.Accepted })
-  attendanceStatus?: AttendanceStatus;
-}
+export class UpdateAttendeeDto extends PartialType(CreateAttendeeDto) {}

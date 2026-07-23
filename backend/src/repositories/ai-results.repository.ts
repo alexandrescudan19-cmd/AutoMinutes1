@@ -62,6 +62,7 @@ export class AiResultsRepository {
       summary: document.summary,
       keyPoints: document.keyPoints,
       decisions: document.decisions,
+      followUpNotes: document.followUpNotes,
       actionItemIds: document.actionItemIds,
       meetingStatistics: document.meetingStatistics,
       generatedAt: document.generatedAt,

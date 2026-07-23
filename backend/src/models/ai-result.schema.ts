@@ -39,6 +39,9 @@ export class AIResult {
   @Prop({ type: [String], default: [] })
   decisions!: string[];
 
+  @Prop({ type: String })
+  followUpNotes?: string;
+
   @Prop({ type: [Types.ObjectId], ref: 'ActionItem', default: [] })
   actionItemIds!: string[];
 

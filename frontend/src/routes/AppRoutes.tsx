@@ -7,6 +7,7 @@ import MeetingsPage from "../pages/Meetings/MeetingsPage";
 import TestLabPage from "../pages/TestLab/TestLabPage";
 import VerifyEmailPage from "../pages/VerifyEmail/VerifyEmailPage";
 import OAuthCallbackPage from "../pages/Login/OAuthCallbackPage";
+import SettingsPage from "../pages/Settings/SettingsPage";
 import ForgotPasswordPage from "../pages/ResetPassword/ForgotPassword";
 import ResetPasswordPage from "../pages/ResetPassword/ResetPassword";
 
@@ -23,15 +24,16 @@ export default function AppRoutes() {
       <Route path="/verify" element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/oauth-callback" element={<OAuthCallbackPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
         <Route path="/action-items" element={<ActionItemsPage />} />
         <Route path="/test-lab" element={<TestLabPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="/" element={<Navigate to="dashboard" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
-      <Route path="/oauth-callback" element={<OAuthCallbackPage />} />
     </Routes>
   );
 }

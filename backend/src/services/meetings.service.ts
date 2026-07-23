@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { AddMeetingInvitationsDto } from '../dto/meetings/add-meeting-invitations.dto';
@@ -40,8 +39,6 @@ export type MeetingHistoryItem = Meeting & {
 
 @Injectable()
 export class MeetingsService {
-  private readonly logger = new Logger(MeetingsService.name);
-
   constructor(
     private readonly meetingsRepository: MeetingsRepository,
     private readonly googleCalendarService: GoogleCalendarService,
@@ -60,6 +57,21 @@ export class MeetingsService {
     const endDateTime = new Date(createMeetingDto.endDateTime);
     const participants = this.normalizeParticipants(createMeetingDto.participants);
 
+    const existingAttendees = (
+      await Promise.all(
+        (createMeetingDto.attendeeIds ?? []).map((id) => this.attendeesRepository.findOne(id)),
+      )
+    ).filter((attendee): attendee is NonNullable<typeof attendee> => Boolean(attendee));
+
+    const allParticipants = this.normalizeParticipants([
+      ...participants,
+      ...existingAttendees.map((attendee) => ({
+        name: attendee.name,
+        email: attendee.email,
+        roleInMeeting: attendee.roleInMeeting,
+      })),
+    ]);
+
     let googleCalendarEventId = createMeetingDto.googleCalendarEventId;
     let googleMeetLink = createMeetingDto.googleMeetLink;
 
@@ -72,7 +84,7 @@ export class MeetingsService {
           description: createMeetingDto.description,
           startDateTime,
           endDateTime,
-          attendees: participants,
+          attendees: allParticipants,
         },
         refreshToken,
       );
@@ -107,7 +119,7 @@ export class MeetingsService {
     const shouldSendInvitations = createMeetingDto.sendInAppInvitations ?? true;
     const invitations = shouldSendInvitations
       ? await Promise.all(
-          participants.map((participant) =>
+          allParticipants.map((participant) =>
             this.invitationsRepository.create({
               meetingId: meeting.id,
               participantEmail: participant.email,
@@ -119,7 +131,7 @@ export class MeetingsService {
 
     const notifications = shouldSendInvitations
       ? await Promise.all(
-          participants.map((participant) =>
+          allParticipants.map((participant) =>
             this.notificationsRepository.create({
               title: `Invitatie la ${meeting.title}`,
               message: this.buildInvitationMessage(meeting, googleMeetLink),
@@ -252,7 +264,6 @@ export class MeetingsService {
         results.push({ meetingId: meeting.id, imported: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown import error';
-        this.logger.debug(`Transcript not ready for meeting ${meeting.id}: ${message}`);
         results.push({ meetingId: meeting.id, imported: false, error: message });
       }
     }
@@ -425,24 +436,25 @@ export class MeetingsService {
     return attendee;
   }
 
-  async removeAttendeeFromMeeting(meetingId: string, attendeeId: string, user: AuthenticatedUser) {
-    const meeting = await this.findOne(meetingId, user);
+  async removeAttendee(
+    meetingId: string,
+    attendeeId: string,
+    user: AuthenticatedUser,
+  ): Promise<Meeting> {
     await this.assertCanManageMeeting(meetingId, user);
 
-    if (!meeting.attendeeIds?.some((id) => id.toString() === attendeeId)) {
-      throw new NotFoundException(`Attendee #${attendeeId} not found for meeting #${meetingId}`);
+    const meeting = await this.meetingsRepository.findOne(meetingId);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${meetingId} not found`);
     }
 
-    const attendee = await this.attendeesRepository.remove(attendeeId);
-    await this.meetingsRepository.update(meetingId, {
-      attendeeIds: meeting.attendeeIds.filter((id) => id.toString() !== attendeeId),
+    await this.attendeesRepository.remove(attendeeId);
+
+    const updatedMeeting = await this.meetingsRepository.update(meetingId, {
+      attendeeIds: (meeting.attendeeIds ?? []).filter((id) => id.toString() !== attendeeId),
     });
 
-    if (!attendee) {
-      throw new NotFoundException(`Attendee #${attendeeId} not found`);
-    }
-
-    return attendee;
+    return updatedMeeting ?? meeting;
   }
 
   findInvitationsByEmail(email: string, user?: AuthenticatedUser): Promise<Invitation[]> {
@@ -543,6 +555,10 @@ export class MeetingsService {
     };
 
     return [...meetings].sort((left, right) => {
+      if (sort === 'title') {
+        return left.title.localeCompare(right.title);
+      }
+
       if (sort === 'status') {
         const statusDiff = (statusOrder[left.status] ?? 99) - (statusOrder[right.status] ?? 99);
         if (statusDiff !== 0) return statusDiff;

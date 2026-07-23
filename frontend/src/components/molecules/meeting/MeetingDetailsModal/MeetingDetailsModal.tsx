@@ -1,43 +1,22 @@
 import { useEffect, useState } from "react";
+import { FiEdit2, FiTrash2, FiVideo } from "react-icons/fi";
 import Modal from "../../common/Modal/Modal.tsx";
 import StatusBadge from "../../common/StatusBadge/StatusBadge.tsx";
-import Tabs from "../../common/Tabs/Tabs.tsx";
-import EmptyState from "../../common/EmptyState/EmptyState.tsx";
-import Loader from "../../../atoms/Loader/Loader.tsx";
-import { api } from "../../../../services/api";
-
-export interface MeetingDetails {
-  id: string;
-  title: string;
-  description?: string;
-  startDateTime: string;
-  endDateTime: string;
-  status: string;
-  aiStatus: string;
-  attendeeIds: string[];
-  transcriptId?: string;   // legatura catre transcript
-  aiResultId?: string;     // legatura catre rezultatul AI
-}
-
-// Forma rezultatului AI, asa cum vine de la backend
-interface AiResult {
-  summary?: string;
-  keyPoints?: string[];
-  decisions?: string[];
-  actionItems?: Array<{
-    id?: string;
-    task?: string;
-    description?: string;
-    assignee?: string;
-    status?: string;
-    deadline?: string;
-  }>;
-}
+import ConfirmDialog from "../../common/ConfirmDialog/ConfirmDialog.tsx";
+import { Button } from "../../../atoms";
+import MeetingForm from "../../../organisms/meeting/MeetingForm/MeetingForm.tsx";
+import MeetingAttendeesPanel from "../../../organisms/attendee/MeetingAttendeesPanel/MeetingAttendeesPanel.tsx";
+import AiResultsPanel from "../../../organisms/ai/AiResultsPanel/AiResultsPanel.tsx";
+import { getMeeting } from "../../../../services/meetings";
+import { useMeetingsStore } from "../../../../stores/meetingsStore";
+import type { Meeting } from "../../../../types";
 
 export interface MeetingDetailsModalProps {
-  meeting: MeetingDetails | null;
+  meetingId: string | null;
   onClose: () => void;
 }
+
+type Tab = "overview" | "attendees" | "ai";
 
 function formatRange(start: string, end: string) {
   const s = new Date(start);
@@ -52,182 +31,199 @@ function formatRange(start: string, end: string) {
   return `${dateLabel} · ${startTime} - ${endTime}`;
 }
 
-export default function MeetingDetailsModal({ meeting, onClose }: MeetingDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [aiResult, setAiResult] = useState<AiResult | null>(null);
-  const [transcript, setTranscript] = useState<string>("");
+function toDateTimeLocal(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "overview", label: "Overview" },
+  { key: "attendees", label: "Participanti" },
+  { key: "ai", label: "Transcript & AI" },
+];
+
+export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetailsModalProps) {
+  const updateMeeting = useMeetingsStore((state) => state.updateMeeting);
+  const deleteMeeting = useMeetingsStore((state) => state.deleteMeeting);
+
+  const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // cand se deschide o alta intalnire, resetam pe primul tab
-  useEffect(() => {
-    setActiveTab("overview");
-    setAiResult(null);
-    setTranscript("");
-  }, [meeting?.id]);
+  const refetchMeeting = async (id: string) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const data = await getMeeting(id);
+      setMeeting(data);
+    } catch {
+      setError("Nu am putut incarca sedinta.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // aducem datele AI + transcript doar cand utilizatorul intra pe tab-ul respectiv
   useEffect(() => {
+    if (meetingId) {
+      setActiveTab("overview");
+      setIsEditing(false);
+      void refetchMeeting(meetingId);
+    } else {
+      setMeeting(null);
+    }
+  }, [meetingId]);
+
+  const handleUpdate = async (values: {
+    title: string;
+    description: string;
+    startDateTime: string;
+    endDateTime: string;
+    status: string;
+    attendeeIds: string[];
+  }) => {
     if (!meeting) return;
-    if (activeTab !== "ai" && activeTab !== "actions") return;
-    if (aiResult) return; 
+    await updateMeeting(meeting.id, {
+      title: values.title,
+      description: values.description,
+      startDateTime: values.startDateTime,
+      endDateTime: values.endDateTime,
+      status: values.status as Meeting["status"],
+      attendeeIds: values.attendeeIds,
+    });
+    setIsEditing(false);
+    await refetchMeeting(meeting.id);
+  };
 
-    const fetchAiData = async () => {
-      setIsLoading(true);
-      try {
-        if (meeting.aiResultId) {
-          const { data } = await api.get<AiResult>(`/ai/results/${meeting.aiResultId}`);
-          setAiResult(data);
-        }
-        if (meeting.transcriptId) {
-          const { data } = await api.get(`/transcripts/${meeting.transcriptId}`);
-          setTranscript(data?.content ?? "");
-        }
-      } catch {
-        
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchAiData();
-  }, [activeTab, meeting, aiResult]);
-
-  const actionItems = aiResult?.actionItems ?? [];
+  const handleDelete = async () => {
+    if (!meeting) return;
+    setIsDeleting(true);
+    try {
+      await deleteMeeting(meeting.id);
+      setIsDeleteOpen(false);
+      onClose();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <Modal isOpen={!!meeting} onClose={onClose} title={meeting?.title ?? ""} size="lg">
+    <Modal isOpen={!!meetingId} onClose={onClose} title={meeting?.title ?? ""} size="xl">
+      {isLoading && <p className="text-sm text-gray-500">Se incarca...</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       {meeting && (
         <div className="flex flex-col gap-4">
-          <Tabs
-            tabs={[
-              { id: "overview", label: "Overview" },
-              { id: "ai", label: "Transcript & AI" },
-              { id: "attendees", label: "Attendees", badge: meeting.attendeeIds?.length ?? 0 },
-              { id: "actions", label: "Action Items", badge: actionItems.length || undefined },
-            ]}
-            activeId={activeTab}
-            onChange={setActiveTab}
-          />
+          <div className="flex gap-1 border-b border-gray-100">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? "border-brand text-brand"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-          {/* TAB 1: Overview */}
-          {activeTab === "overview" && (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <StatusBadge status={meeting.status} />
-                <StatusBadge status={meeting.aiStatus} />
-              </div>
-              <p className="text-sm text-gray-600">
-                {formatRange(meeting.startDateTime, meeting.endDateTime)}
-              </p>
-              {meeting.description ? (
-                <p className="text-sm text-gray-700">{meeting.description}</p>
+          <div className="min-h-[480px]">
+            {activeTab === "overview" &&
+              (isEditing ? (
+                <MeetingForm
+                  initialValues={{
+                    title: meeting.title,
+                    description: meeting.description ?? "",
+                    startDateTime: toDateTimeLocal(meeting.startDateTime),
+                    endDateTime: toDateTimeLocal(meeting.endDateTime),
+                    status: meeting.status,
+                    attendeeIds: meeting.attendeeIds,
+                  }}
+                  onSubmit={handleUpdate}
+                  onCancel={() => setIsEditing(false)}
+                  submitLabel="Salveaza modificarile"
+                />
               ) : (
-                <p className="text-sm text-gray-400">Fără descriere.</p>
-              )}
-            </div>
-          )}
-
-          {/* TAB 2: Transcript & AI */}
-          {activeTab === "ai" && (
-            <div className="flex flex-col gap-4">
-              {isLoading && <Loader label="Se încarcă..." />}
-
-              {!isLoading && !aiResult && !transcript && (
-                <EmptyState
-                  title="Niciun rezultat AI"
-                  description="Transcriptul nu a fost procesat încă."
-                />
-              )}
-
-              {!isLoading && transcript && (
-                <div>
-                  <h4 className="mb-1 text-sm font-medium text-gray-900">Transcript</h4>
-                  <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
-                    {transcript}
-                  </pre>
-                </div>
-              )}
-
-              {!isLoading && aiResult?.summary && (
-                <div>
-                  <h4 className="mb-1 text-sm font-medium text-gray-900">Rezumat</h4>
-                  <p className="text-sm text-gray-700">{aiResult.summary}</p>
-                </div>
-              )}
-
-              {!isLoading && (aiResult?.keyPoints?.length ?? 0) > 0 && (
-                <div>
-                  <h4 className="mb-1 text-sm font-medium text-gray-900">Puncte cheie</h4>
-                  <ul className="list-disc pl-5 text-sm text-gray-700">
-                    {aiResult!.keyPoints!.map((point, i) => (
-                      <li key={i}>{point}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {!isLoading && (aiResult?.decisions?.length ?? 0) > 0 && (
-                <div>
-                  <h4 className="mb-1 text-sm font-medium text-gray-900">Decizii</h4>
-                  <ul className="list-disc pl-5 text-sm text-gray-700">
-                    {aiResult!.decisions!.map((decision, i) => (
-                      <li key={i}>{decision}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: Attendees */}
-          {activeTab === "attendees" && (
-            <div>
-              {meeting.attendeeIds?.length ? (
-                <p className="text-sm text-gray-600">
-                  {meeting.attendeeIds.length} participanți înregistrați.
-                </p>
-              ) : (
-                <EmptyState
-                  title="Niciun participant"
-                  description="Nu au fost adăugați participanți la această întâlnire."
-                />
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: Action Items */}
-          {activeTab === "actions" && (
-            <div className="flex flex-col gap-2">
-              {isLoading && <Loader label="Se încarcă..." />}
-
-              {!isLoading && actionItems.length === 0 && (
-                <EmptyState
-                  title="Niciun action item"
-                  description="AI-ul nu a extras acțiuni din această întâlnire."
-                />
-              )}
-
-              {!isLoading &&
-                actionItems.map((item, i) => (
-                  <div
-                    key={item.id ?? i}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900">
-                        {item.task ?? item.description ?? "Fără titlu"}
-                      </p>
-                      {item.assignee && (
-                        <p className="text-xs text-gray-500">Asignat: {item.assignee}</p>
-                      )}
-                    </div>
-                    {item.status && <StatusBadge status={item.status} />}
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={meeting.status} />
+                    <StatusBadge status={meeting.aiStatus} />
                   </div>
-                ))}
-            </div>
-          )}
+
+                  <p className="text-sm text-gray-600">
+                    {formatRange(meeting.startDateTime, meeting.endDateTime)}
+                  </p>
+
+                  {meeting.description && (
+                    <p className="text-sm text-gray-700">{meeting.description}</p>
+                  )}
+
+                  <p className="text-sm text-gray-500">
+                    {meeting.attendeeIds.length} participanti
+                  </p>
+
+                  {meeting.googleMeetLink && (
+                    <a
+                      href={meeting.googleMeetLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex w-fit items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-medium text-brand hover:bg-brand/10"
+                    >
+                      <FiVideo aria-hidden="true" />
+                      Alatura-te pe Google Meet
+                    </a>
+                  )}
+
+                  <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      leftIcon={<FiEdit2 aria-hidden="true" />}
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Editeaza
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      leftIcon={<FiTrash2 aria-hidden="true" />}
+                      onClick={() => setIsDeleteOpen(true)}
+                    >
+                      Sterge
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+            {activeTab === "attendees" && (
+              <MeetingAttendeesPanel meeting={meeting} onChanged={() => void refetchMeeting(meeting.id)} />
+            )}
+
+            {activeTab === "ai" && (
+              <AiResultsPanel meeting={meeting} onMeetingChanged={() => void refetchMeeting(meeting.id)} />
+            )}
+          </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        title="Sterge sedinta?"
+        message="Aceasta actiune este ireversibila. Sigur vrei sa stergi aceasta sedinta?"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setIsDeleteOpen(false)}
+      />
     </Modal>
   );
 }

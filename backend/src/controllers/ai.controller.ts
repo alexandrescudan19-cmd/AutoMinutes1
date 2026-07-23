@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -88,6 +89,13 @@ export class AiController {
   @Get('results/:id/action-items')
   getActionItems(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.aiService.getActionItems(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Sterge un action item' })
+  @ApiParam({ name: 'id', description: 'ID-ul action item-ului' })
+  @Delete('action-items/:id')
+  removeActionItem(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.aiService.removeActionItem(id, req.user);
   }
 
   @ApiOperation({ summary: 'Proceseaza transcriptul unei sedinte cu AI' })

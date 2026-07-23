@@ -9,7 +9,7 @@ export interface ModalProps {
   title?: ReactNode;
   children: ReactNode;        // continutul modalului
   footer?: ReactNode;         // zona de jos (ex: butoane)
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   closeOnBackdrop?: boolean;  // daca click pe fundalul intunecat inchide (implicit true)
 }
 
@@ -17,6 +17,7 @@ const sizes: Record<NonNullable<ModalProps['size']>, string> = {
   sm: 'max-w-sm',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
 };
 
 export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', closeOnBackdrop = true }: ModalProps) {
@@ -50,10 +51,10 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
       <div
         role="dialog"
         aria-modal="true"
-        className={cn('w-full rounded-xl bg-white shadow-xl', sizes[size])}
+        className={cn('flex max-h-[85vh] w-full flex-col rounded-xl bg-white shadow-xl', sizes[size])}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3">
           {typeof title === 'string' ? <h3 className="font-medium text-gray-900">{title}</h3> : title}
           <button
             type="button"
@@ -65,9 +66,13 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
           </button>
         </div>
 
-        <div className="px-5 py-4">{children}</div>
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
 
-        {footer && <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3">{footer}</div>}
+        {footer && (
+          <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-5 py-3">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body,

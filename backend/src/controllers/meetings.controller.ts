@@ -133,7 +133,14 @@ export class MeetingsController {
     );
   }
 
-  @ApiOperation({ summary: 'Sterge un participant dintr-o sedinta' })
+  @ApiOperation({ summary: 'Sterge o sedinta' })
+  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
+  @Delete(':id')
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.meetingsService.remove(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Elimina un participant dintr-o sedinta' })
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @ApiParam({ name: 'attendeeId', description: 'ID-ul participantului' })
   @Delete(':id/attendees/:attendeeId')
@@ -142,13 +149,6 @@ export class MeetingsController {
     @Param('attendeeId') attendeeId: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.meetingsService.removeAttendeeFromMeeting(id, attendeeId, req.user);
-  }
-
-  @ApiOperation({ summary: 'Sterge o sedinta' })
-  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
-  @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.meetingsService.remove(id, req.user);
+    return this.meetingsService.removeAttendee(id, attendeeId, req.user);
   }
 }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -7,6 +8,7 @@ import {
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
 import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItem, ActionItemStatus } from '../models/action-item.schema';
+import { AIResult } from '../models/ai-result.schema';
 import { AiStatus, Meeting } from '../models/meeting.schema';
 import { ActionItemsRepository } from '../repositories/action-items.repository';
 import { AiResultsRepository } from '../repositories/ai-results.repository';
@@ -20,6 +22,7 @@ interface AiTranscriptResult {
   summary: string;
   keyPoints?: string[];
   decisions?: string[];
+  followUpNotes?: string;
   meetingStatistics?: {
     durationMinutes?: number;
     participantCount?: number;
@@ -100,36 +103,6 @@ export class AiService {
     };
   }
 
-  async updateActionItem(
-    actionItemId: string,
-    updateActionItemDto: UpdateActionItemDto,
-    user: AuthenticatedUser,
-  ) {
-    const actionItem = await this.actionItemsRepository.findOne(actionItemId);
-    if (!actionItem?.aiResultId) {
-      throw new NotFoundException(`Action item #${actionItemId} not found`);
-    }
-
-    await this.getAccessibleAiResult(actionItem.aiResultId, user);
-
-    const updatedActionItem = await this.actionItemsRepository.update(actionItemId, {
-      ...updateActionItemDto,
-      task: updateActionItemDto.task?.trim(),
-      responsiblePerson: updateActionItemDto.responsiblePerson?.trim(),
-      dueDate:
-        updateActionItemDto.dueDate === null
-          ? undefined
-          : this.parseDueDate(updateActionItemDto.dueDate),
-      confidenceScore: this.clampConfidence(updateActionItemDto.confidenceScore),
-    });
-
-    if (!updatedActionItem) {
-      throw new NotFoundException(`Action item #${actionItemId} not found`);
-    }
-
-    return updatedActionItem;
-  }
-
   async listActionItems(user: AuthenticatedUser, filters?: { status?: ActionItemStatus }) {
     const meetings = await this.findAccessibleMeetings(user);
     const meetingsByAiResultId = new Map(
@@ -150,6 +123,75 @@ export class AiService {
         return meeting ? this.withMeeting(actionItem, meeting) : undefined;
       })
       .filter((actionItem): actionItem is ActionItemListItem => Boolean(actionItem));
+  }
+
+  async updateActionItem(
+    id: string,
+    dto: UpdateActionItemDto,
+    user: AuthenticatedUser,
+  ): Promise<ActionItem> {
+    const actionItem = await this.actionItemsRepository.findOne(id);
+    if (!actionItem) {
+      throw new NotFoundException(`Action item #${id} not found`);
+    }
+    await this.resolveActionItemContext(actionItem, user);
+
+    const { dueDate, ...rest } = dto;
+    const updated = await this.actionItemsRepository.update(id, {
+      ...rest,
+      task: rest.task?.trim(),
+      responsiblePerson: rest.responsiblePerson?.trim(),
+      confidenceScore: this.clampConfidence(rest.confidenceScore),
+      ...(dueDate !== undefined ? { dueDate: new Date(dueDate) } : {}),
+    });
+    if (!updated) {
+      throw new NotFoundException(`Action item #${id} not found`);
+    }
+    return updated;
+  }
+
+  async removeActionItem(id: string, user: AuthenticatedUser): Promise<ActionItem> {
+    const actionItem = await this.actionItemsRepository.findOne(id);
+    if (!actionItem) {
+      throw new NotFoundException(`Action item #${id} not found`);
+    }
+    const { aiResult } = await this.resolveActionItemContext(actionItem, user);
+
+    const removed = await this.actionItemsRepository.remove(id);
+    if (!removed) {
+      throw new NotFoundException(`Action item #${id} not found`);
+    }
+
+    await this.aiResultsRepository.update(aiResult.id, {
+      actionItemIds: aiResult.actionItemIds.filter((actionItemId) => actionItemId !== id),
+    });
+
+    return removed;
+  }
+
+  private async resolveActionItemContext(
+    actionItem: ActionItem,
+    user: AuthenticatedUser,
+  ): Promise<{ aiResult: AIResult; meeting: Meeting }> {
+    if (!actionItem.aiResultId) {
+      throw new NotFoundException('Action item-ul nu are un meeting asociat.');
+    }
+
+    const aiResult = await this.aiResultsRepository.findOne(actionItem.aiResultId);
+    if (!aiResult) {
+      throw new NotFoundException(`AI result #${actionItem.aiResultId} not found`);
+    }
+
+    const meeting = await this.meetingsRepository.findOne(aiResult.meetingId);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${aiResult.meetingId} not found`);
+    }
+
+    if (meeting.ownerId?.toString() !== user.userId) {
+      throw new ForbiddenException('Doar creatorul meeting-ului poate modifica action items.');
+    }
+
+    return { aiResult, meeting };
   }
 
   async processTranscript(processTranscriptDto: ProcessTranscriptDto, user?: AuthenticatedUser) {
@@ -180,6 +222,7 @@ export class AiService {
         summary: aiOutput.summary,
         keyPoints: aiOutput.keyPoints ?? [],
         decisions: aiOutput.decisions ?? [],
+        followUpNotes: this.normalizeFollowUpNotes(aiOutput.followUpNotes),
         meetingStatistics: {
           ...aiOutput.meetingStatistics,
           actionItemCount: aiOutput.actionItems?.length ?? 0,
@@ -258,6 +301,7 @@ Required JSON schema:
   "summary": "specific meeting summary",
   "keyPoints": ["specific key point from the transcript"],
   "decisions": ["specific decision from the transcript"],
+  "followUpNotes": "additional context or next steps to keep in mind for the next meeting, or null if none",
   "meetingStatistics": {
     "durationMinutes": 0,
     "participantCount": 0,
@@ -303,6 +347,7 @@ Schema JSON obligatorie:
   "summary": "rezumat specific al sedintei",
   "keyPoints": ["punct cheie specific din transcript"],
   "decisions": ["decizie specifica din transcript"],
+  "followUpNotes": "context suplimentar sau pasi urmatori de retinut pentru sedinta viitoare, sau null daca nu exista",
   "meetingStatistics": {
     "durationMinutes": 0,
     "participantCount": 0,
@@ -336,6 +381,11 @@ Reguli obligatorii pentru actionItems:
 Transcript:
 ${transcript}
 `;
+  }
+
+  private normalizeFollowUpNotes(notes?: string): string | undefined {
+    if (!notes || notes.trim().toLowerCase() === 'null') return undefined;
+    return notes.trim();
   }
 
   private parseDueDate(dueDate?: string): Date | undefined {

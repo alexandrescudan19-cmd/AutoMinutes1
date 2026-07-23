@@ -1,4 +1,3 @@
-import Button from '../../../atoms/Button/Button.tsx';
 import StatCard from '../../../molecules/meeting/StatCard/StatCard.tsx';
 
 export interface MeetingsStats {
@@ -10,18 +9,14 @@ export interface MeetingsStats {
 
 export interface MeetingsHeaderProps {
   stats: MeetingsStats;
-  onNewMeeting: () => void;
 }
 
-export default function MeetingsHeader({ stats, onNewMeeting }: MeetingsHeaderProps) {
+export default function MeetingsHeader({ stats }: MeetingsHeaderProps) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Întâlniri</h1>
-          <p className="text-sm text-gray-500">{stats.total} întâlniri în total</p>
-        </div>
-        <Button onClick={onNewMeeting}>+ Întâlnire nouă</Button>
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Întâlniri</h1>
+        <p className="text-sm text-gray-500">{stats.total} întâlniri în total</p>
       </div>
 
       <div className="flex flex-wrap gap-4">

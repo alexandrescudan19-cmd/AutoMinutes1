@@ -2,8 +2,10 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Avatar, Button } from "../atoms";
 import { Modal } from "../molecules";
-import { MeetingForm } from "../molecules";
-import { api } from "../../services/api";
+import { MeetingForm, type MeetingFormValues } from "../organisms/meeting";
+import { useMeetingsStore } from "../../stores/meetingsStore";
+import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
+import type { Meeting } from "../../types";
 
 export interface AppLayoutProps {
   children: ReactNode;
@@ -162,34 +164,32 @@ function UserMenu() {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);        
+  const createMeeting = useMeetingsStore((state) => state.createMeeting);
+  const { connected: googleConnected, loading: googleStatusLoading } = useGoogleConnectionStatus();
 
-  async function handleCreateMeeting(values: {           
-    title: string;
-    startDateTime: string;
-    endDateTime: string;
-    description: string;
-  }) {
-    setIsSaving(true);
-    try {
-      const user = JSON.parse(localStorage.getItem("user") ?? "null");
-      await api.post("/meetings", {
-        ownerId: user?.id,
-        title: values.title,
-        description: values.description,
-        startDateTime: new Date(values.startDateTime).toISOString(),
-        endDateTime: new Date(values.endDateTime).toISOString(),
-      });
-      setIsNewMeetingOpen(false);
-      window.location.href = "/meetings";
-    } catch (err) {
-      console.error("Eroare la creare:", err);
-      alert("Nu am putut crea întâlnirea. Verifică consola.");
-    } finally {
-      setIsSaving(false);
+  const handleConnectGoogle = () => {
+    if (googleConnected) {
+      navigate("/settings");
+      return;
     }
-  }
+    const token = localStorage.getItem("accessToken");
+    window.location.href = `http://localhost:3500/auth/google/connect?token=${token}`;
+  };
+
+  const handleCreateMeeting = async (values: MeetingFormValues) => {
+    const created = await createMeeting({
+      title: values.title,
+      description: values.description,
+      startDateTime: values.startDateTime,
+      endDateTime: values.endDateTime,
+      status: values.status as Meeting["status"],
+      attendeeIds: values.attendeeIds,
+      createGoogleCalendarEvent: values.createGoogleCalendarEvent,
+    });
+    if (created) setIsNewMeetingOpen(false);
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -206,10 +206,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Button
           variant="primary"
           fullWidth
-          className="mb-6"
+          className="mb-2"
           onClick={() => setIsNewMeetingOpen(true)}
         >
           + New meeting
+        </Button>
+
+        <Button
+          variant="secondary"
+          fullWidth
+          className="mb-6"
+          isLoading={googleStatusLoading}
+          onClick={handleConnectGoogle}
+        >
+          {googleConnected ? "Google conectat" : "Connect to Google"}
         </Button>
 
         <nav className="flex flex-1 flex-col gap-1">
@@ -242,13 +252,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <Modal
         isOpen={isNewMeetingOpen}
         onClose={() => setIsNewMeetingOpen(false)}
-        title="New meeting"
+        title="Sedinta noua"
+        size="lg"
       >
-          <MeetingForm
-            onSubmit={handleCreateMeeting}
-            onCancel={() => setIsNewMeetingOpen(false)}
-            isSubmitting={isSaving}
-          />
+        <MeetingForm
+          onSubmit={handleCreateMeeting}
+          onCancel={() => setIsNewMeetingOpen(false)}
+          submitLabel="Creeaza sedinta"
+          showGoogleCalendarOption
+        />
       </Modal>
     </div>
   );

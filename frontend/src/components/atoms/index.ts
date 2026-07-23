@@ -22,4 +22,7 @@ export * from "./Card/Card.tsx";
 export { default as Avatar } from "./Avatar/Avatar.tsx";
 export type { AvatarProps } from "./Avatar/Avatar.tsx";
 
+export { default as Select } from "./Select/Select.tsx";
+export type { SelectOption, SelectProps } from "./Select/Select.tsx";
+
 export { cn } from "./cn.ts";
