@@ -6,6 +6,7 @@ import { MeetingForm, type MeetingFormValues } from "../organisms/meeting";
 import { useMeetingsStore } from "../../stores/meetingsStore";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
 import type { Meeting } from "../../types";
+import { FiMenu, FiX } from "react-icons/fi";
 
 export interface AppLayoutProps {
   children: ReactNode;
@@ -165,9 +166,14 @@ function UserMenu() {
 export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const createMeeting = useMeetingsStore((state) => state.createMeeting);
   const { connected: googleConnected, loading: googleStatusLoading } = useGoogleConnectionStatus();
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   const handleConnectGoogle = () => {
     if (googleConnected) {
@@ -193,7 +199,29 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="flex w-64 flex-shrink-0 flex-col border-r border-gray-200 bg-white px-4 py-6">
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-shrink-0 flex-col border-r border-gray-200 bg-white px-4 py-6 transition-transform md:static md:z-auto md:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* buton de inchidere, vizibil doar pe mobil */}
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-label="Inchide meniul"
+          className="absolute right-3 top-3 rounded p-1.5 text-gray-400 hover:bg-gray-100 md:hidden"
+        >
+          <FiX />
+        </button>
+
         <Link to="/dashboard" className="mb-6 flex items-center gap-2 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-sm font-semibold text-white">
             A
@@ -246,7 +274,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </aside>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+        {/* bara de sus cu hamburger, doar pe mobil */}
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Deschide meniul"
+            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+          >
+            <FiMenu />
+          </button>
+          <span className="text-base font-semibold text-gray-900">AutoMinutes</span>
+        </div>
+
+        <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
 
       <Modal
