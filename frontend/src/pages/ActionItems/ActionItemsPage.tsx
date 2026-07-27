@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
-import { Button, Card, Select } from "../../components/atoms";
+import { Button, Card } from "../../components/atoms";
+import { FilterPill } from "../../components/molecules";
 import { ActionItemList } from "../../components/organisms/action-item";
 import { AppLayout } from "../../components/templates";
 import { listActionItems } from "../../services/actionItems";
@@ -9,7 +10,7 @@ import type { ActionItemListItem, ActionItemStatus } from "../../types";
 type StatusFilter = "all" | ActionItemStatus;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "Toate statusurile" },
+  { value: "all", label: "All statuses" },
   { value: "In Progress", label: "In progress" },
   { value: "Pending", label: "Open" },
   { value: "Completed", label: "Done" },
@@ -41,6 +42,8 @@ export default function ActionItemsPage() {
     [actionItems, assigneeFilter, statusFilter],
   );
 
+  const hasActiveFilters = statusFilter !== "all" || assigneeFilter !== "all";
+
   const loadActionItems = async () => {
     setIsLoading(true);
     setError("");
@@ -48,7 +51,7 @@ export default function ActionItemsPage() {
       const data = await listActionItems();
       setActionItems(data);
     } catch {
-      setError("Nu am putut incarca action items.");
+      setError("Couldn't load action items.");
     } finally {
       setIsLoading(false);
     }
@@ -63,8 +66,8 @@ export default function ActionItemsPage() {
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Action Items</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Action Items</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {visibleActionItems.length} items across all meetings
             </p>
           </div>
@@ -79,27 +82,44 @@ export default function ActionItemsPage() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Select
-            options={STATUS_OPTIONS}
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterPill
+            label="Status"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            defaultValue="all"
+            options={STATUS_OPTIONS}
+            onChange={(value) => setStatusFilter(value as StatusFilter)}
           />
-          <Select
+          <FilterPill
+            label="Assignee"
+            value={assigneeFilter}
+            defaultValue="all"
             options={[
-              { value: "all", label: "Toti responsabilii" },
+              { value: "all", label: "All assignees" },
               ...assignees.map((assignee) => ({ value: assignee, label: assignee })),
             ]}
-            value={assigneeFilter}
-            onChange={(event) => setAssigneeFilter(event.target.value)}
+            width="w-56"
+            onChange={setAssigneeFilter}
           />
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter("all");
+                setAssigneeFilter("all");
+              }}
+              className="text-sm font-medium text-gray-400 transition-colors hover:text-brand dark:text-gray-500"
+            >
+              Reset
+            </button>
+          )}
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <Card>
           {isLoading ? (
-            <p className="text-sm text-gray-500">Se incarca...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
           ) : (
             <ActionItemList
               items={visibleActionItems}

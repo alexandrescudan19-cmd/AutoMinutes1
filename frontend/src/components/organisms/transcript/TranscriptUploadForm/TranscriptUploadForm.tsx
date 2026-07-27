@@ -12,7 +12,7 @@ export interface TranscriptUploadFormProps {
 
 export default function TranscriptUploadForm({
   meetingId,
-  submitLabel = "Proceseaza cu AI",
+  submitLabel = "Process with AI",
   onProcessed,
 }: TranscriptUploadFormProps) {
   const [transcript, setTranscript] = useState("");
@@ -29,7 +29,7 @@ export default function TranscriptUploadForm({
   const handleSubmit = async () => {
     setError("");
     if (!transcript.trim()) {
-      setError("Transcriptul nu poate fi gol.");
+      setError("Transcript can't be empty.");
       return;
     }
 
@@ -43,7 +43,7 @@ export default function TranscriptUploadForm({
       });
       onProcessed(result);
     } catch {
-      setError("Procesarea AI a esuat. Rezultatele anterioare (daca exista) au fost pastrate.");
+      setError("AI processing failed. Any previous results have been kept.");
     } finally {
       setIsSubmitting(false);
     }
@@ -52,12 +52,12 @@ export default function TranscriptUploadForm({
   return (
     <div className="flex flex-col gap-3">
       <TextArea
-        label="Transcript"
         value={transcript}
         onChange={(e) => setTranscript(e.target.value)}
-        placeholder="Lipeste transcriptul sedintei aici..."
-        rows={20}
-        className="min-h-[400px] font-mono text-sm"
+        placeholder="Paste the meeting transcript here..."
+        rows={8}
+        className="font-mono text-sm"
+        style={{ resize: "none" }}
       />
 
       <input
@@ -74,13 +74,18 @@ export default function TranscriptUploadForm({
         leftIcon={<FiUpload aria-hidden="true" />}
         onClick={() => fileInputRef.current?.click()}
       >
-        Incarca fisier .txt
+        Upload .txt file
       </Button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <div className="flex justify-end">
-        <Button type="button" isLoading={isSubmitting} onClick={() => void handleSubmit()}>
+        <Button
+          type="button"
+          isLoading={isSubmitting}
+          disabled={!transcript.trim()}
+          onClick={() => void handleSubmit()}
+        >
           {submitLabel}
         </Button>
       </div>

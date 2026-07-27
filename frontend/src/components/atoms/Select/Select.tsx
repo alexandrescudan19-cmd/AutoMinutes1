@@ -60,10 +60,11 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
         aria-describedby={describedBy}
         className={cn(
           "h-10 rounded-lg border bg-white px-3 text-sm text-gray-900 transition-colors " +
-            "focus-visible:outline-none focus-visible:ring-2 disabled:bg-gray-50 disabled:opacity-60",
+            "focus-visible:outline-none focus-visible:ring-2 disabled:bg-gray-50 disabled:opacity-60 " +
+            "dark:bg-gray-900 dark:text-gray-100 dark:disabled:bg-gray-800",
           error
-            ? "border-red-400 focus-visible:ring-red-400"
-            : "border-gray-300 focus-visible:ring-brand",
+            ? "border-red-400 focus-visible:ring-red-400 dark:border-red-500"
+            : "border-gray-300 focus-visible:ring-brand dark:border-gray-700",
           className,
         )}
         {...props}

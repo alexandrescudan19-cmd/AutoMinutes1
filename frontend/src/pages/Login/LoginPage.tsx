@@ -3,7 +3,8 @@ import { isAxiosError } from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Card, Input, PasswordInput } from "../../components/atoms";
 import { AuthLayout } from "../../components/templates";
-import { api } from "../../services/api";
+import { api, API_BASE_URL } from "../../services/api";
+import { applyTheme } from "../../hooks/useTheme";
 
 function getApiErrorMessage(error: unknown) {
   if (isAxiosError<{ message?: string }>(error)) {
@@ -50,6 +51,9 @@ export default function LoginPage() {
       const { data } = await api.post("/auth/login", { email, password });
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.user?.themePreference === "light" || data.user?.themePreference === "dark") {
+        applyTheme(data.user.themePreference);
+      }
       navigate("/dashboard");
     } catch (err: unknown) {
       setError(getApiErrorMessage(err));
@@ -102,7 +106,7 @@ export default function LoginPage() {
               aria-label="Sign in with Google"
               className="h-11 w-11 rounded-full border border-gray-300 p-0 cursor-pointer"
               onClick={() => {
-                window.location.href = "http://localhost:3500/auth/google";
+                window.location.href = `${API_BASE_URL}/auth/google`;
               }}
             >
               <GoogleIcon />

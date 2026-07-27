@@ -28,25 +28,34 @@ export interface MeetingHistoryItem extends Meeting {
   actionItemsCount: number;
 }
 
+export interface MeetingHistoryStats {
+  total: number;
+  processing: number;
+  completed: number;
+  openActionItems: number;
+}
+
 export interface MeetingHistoryResponse {
   items: MeetingHistoryItem[];
   total: number;
   page: number;
   pageSize: number;
   pageCount: number;
+  stats: MeetingHistoryStats;
 }
 
 export interface MeetingHistoryQuery {
   search?: string;
   sort?: MeetingHistorySort;
   status?: MeetingStatus;
+  aiStatus?: AiStatus;
   page?: number;
   pageSize?: number;
 }
 
 export interface MeetingParticipant {
   name: string;
-  email: string;
+  email?: string;
   roleInMeeting?: string;
 }
 
@@ -67,7 +76,7 @@ export type UpdateMeetingInput = Partial<CreateMeetingInput>;
 export interface Attendee {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   roleInMeeting: string;
   attendanceStatus: AttendanceStatus;
   createdAt?: string;
@@ -76,8 +85,8 @@ export interface Attendee {
 
 export interface CreateAttendeeInput {
   name: string;
-  email: string;
-  roleInMeeting: string;
+  email?: string;
+  roleInMeeting?: string;
   attendanceStatus?: AttendanceStatus;
 }
 

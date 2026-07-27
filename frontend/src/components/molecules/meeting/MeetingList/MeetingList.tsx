@@ -14,15 +14,15 @@ export default function MeetingList({ meetings, onSelect, query = '' }: MeetingL
       {meetings.length === 0 ? (
         <EmptyState
           icon={<FiInbox />}
-          title={query ? 'Niciun rezultat' : 'Nicio intalnire inca'}
+          title={query ? 'No results' : 'No meetings yet'}
           description={
             query
-              ? `Nu am gasit intalniri pentru "${query}".`
-              : 'Creeaza prima intalnire ca sa incepi.'
+              ? `We couldn't find any meetings for "${query}".`
+              : 'Create your first meeting to get started.'
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200">
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
           {meetings.map((meeting) => (
             <MeetingRow key={meeting.id} meeting={meeting} onClick={onSelect} />
           ))}

@@ -25,4 +25,7 @@ export type { AvatarProps } from "./Avatar/Avatar.tsx";
 export { default as Select } from "./Select/Select.tsx";
 export type { SelectOption, SelectProps } from "./Select/Select.tsx";
 
+export { default as Chip } from "./Chip/Chip.tsx";
+export type { ChipProps } from "./Chip/Chip.tsx";
+
 export { cn } from "./cn.ts";

@@ -7,6 +7,7 @@ import { MeetingsModule } from '../modules/meetings.module';
 import { AiModule } from '../modules/ai.module';
 import { AuthModule } from '../modules/auth.module';
 import { AttendeesModule } from '../modules/attendees.module';
+import { UsersModule } from '../modules/users.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AttendeesModule } from '../modules/attendees.module';
     AiModule,
     AuthModule,
     AttendeesModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

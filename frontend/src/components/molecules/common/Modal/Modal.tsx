@@ -4,13 +4,13 @@ import { FiX } from 'react-icons/fi';
 import { cn } from '../../../atoms/cn.ts';
 
 export interface ModalProps {
-  isOpen: boolean;            // controlat de parinte: e deschis sau nu
-  onClose: () => void;       
+  isOpen: boolean;            // controlled by the parent: open or not
+  onClose: () => void;
   title?: ReactNode;
-  children: ReactNode;        // continutul modalului
-  footer?: ReactNode;         // zona de jos (ex: butoane)
+  children: ReactNode;        // the modal's content
+  footer?: ReactNode;         // bottom area (e.g. buttons)
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  closeOnBackdrop?: boolean;  // daca click pe fundalul intunecat inchide (implicit true)
+  closeOnBackdrop?: boolean;  // whether clicking the dark backdrop closes it (default true)
 }
 
 const sizes: Record<NonNullable<ModalProps['size']>, string> = {
@@ -21,7 +21,7 @@ const sizes: Record<NonNullable<ModalProps['size']>, string> = {
 };
 
 export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', closeOnBackdrop = true }: ModalProps) {
-  // Cand modalul e deschis: asculta tasta Escape si blocheaza scroll-ul paginii din spate.
+  // While the modal is open: listen for the Escape key and block scrolling on the page behind it.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -31,7 +31,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
 
-    // curatenie: cand modalul se inchide, oprim ascultarea si redam scroll-ul
+    // cleanup: when the modal closes, stop listening and restore scrolling
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
@@ -40,7 +40,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   if (!isOpen) return null;
 
-  // createPortal: randam modalul direct in <body>, peste tot restul paginii
+  // createPortal: render the modal directly into <body>, above the rest of the page
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -51,16 +51,23 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
       <div
         role="dialog"
         aria-modal="true"
-        className={cn('flex max-h-[85vh] w-full flex-col rounded-xl bg-white shadow-xl', sizes[size])}
+        className={cn(
+          'flex max-h-[85vh] w-full flex-col rounded-xl bg-white shadow-xl dark:bg-gray-900 dark:ring-1 dark:ring-gray-800',
+          sizes[size],
+        )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3">
-          {typeof title === 'string' ? <h3 className="font-medium text-gray-900">{title}</h3> : title}
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+          {typeof title === 'string' ? (
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+          ) : (
+            title
+          )}
           <button
             type="button"
             onClick={onClose}
-            aria-label="Închide"
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close"
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
           >
             <FiX aria-hidden="true" />
           </button>
@@ -69,7 +76,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
         <div className="overflow-y-auto px-5 py-4">{children}</div>
 
         {footer && (
-          <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-5 py-3">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-800">
             {footer}
           </div>
         )}

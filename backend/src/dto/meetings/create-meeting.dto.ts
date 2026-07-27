@@ -5,8 +5,8 @@ export class CreateMeetingParticipantDto {
   @ApiProperty({ example: 'Maria Ionescu' })
   name!: string;
 
-  @ApiProperty({ example: 'maria.ionescu@example.com' })
-  email!: string;
+  @ApiPropertyOptional({ example: 'maria.ionescu@example.com' })
+  email?: string;
 
   @ApiPropertyOptional({ example: 'Frontend Developer' })
   roleInMeeting?: string;

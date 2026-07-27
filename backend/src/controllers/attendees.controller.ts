@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CreateAttendeeDto } from '../dto/attendees/create-attendee.dto';
@@ -35,5 +35,12 @@ export class AttendeesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAttendeeDto: UpdateAttendeeDto) {
     return this.attendeesService.update(id, updateAttendeeDto);
+  }
+
+  @ApiOperation({ summary: 'Sterge un participant din lista salvata' })
+  @ApiParam({ name: 'id', description: 'ID-ul participantului' })
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.attendeesService.remove(id);
   }
 }

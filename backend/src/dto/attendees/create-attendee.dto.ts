@@ -5,8 +5,8 @@ export class CreateAttendeeDto {
   @ApiProperty({ example: 'Maria Ionescu' })
   name!: string;
 
-  @ApiProperty({ example: 'maria.ionescu@example.com' })
-  email!: string;
+  @ApiPropertyOptional({ example: 'maria.ionescu@example.com' })
+  email?: string;
 
   @ApiProperty({ example: 'Frontend Developer' })
   roleInMeeting!: string;

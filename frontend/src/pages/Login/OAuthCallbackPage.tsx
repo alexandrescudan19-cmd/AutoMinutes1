@@ -1,15 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, Loader } from "../../components/atoms";
-
-function decodeJwtPayload(token: string) {
-  try {
-    const payload = token.split(".")[1];
-    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-  } catch {
-    return null;
-  }
-}
+import { applyTheme } from "../../hooks/useTheme";
+import { getMe } from "../../services/users";
 
 export default function OAuthCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -28,24 +21,18 @@ export default function OAuthCallbackPage() {
 
     localStorage.setItem("accessToken", token);
 
-    const payload = decodeJwtPayload(token);
-    localStorage.setItem(
-      "user",
-      JSON.stringify(
-        payload
-          ? {
-              id: payload.sub,
-              email: payload.email,
-              role: payload.role,
-              firstName: payload.firstName,
-              lastName: payload.lastName,
-              isVerified: true,
-            }
-          : null,
-      ),
-    );
-
-    navigate("/dashboard", { replace: true });
+    // Fetch the real profile instead of decoding the JWT client-side, so the
+    // stored user (and its theme preference) matches what a password login gets.
+    getMe()
+      .then((user) => {
+        localStorage.setItem("user", JSON.stringify(user));
+        if (user.themePreference === "light" || user.themePreference === "dark") {
+          applyTheme(user.themePreference);
+        }
+      })
+      .finally(() => {
+        navigate("/dashboard", { replace: true });
+      });
   }, [searchParams, navigate]);
 
   return (

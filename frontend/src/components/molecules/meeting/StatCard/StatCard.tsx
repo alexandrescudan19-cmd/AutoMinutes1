@@ -23,8 +23,8 @@ export default function StatCard({ label, value, accent = 'gray', icon }: StatCa
       <div className="flex items-center gap-3">
         {icon ?? <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accents[accent]}`} aria-hidden="true" />}
         <div>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
-          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
         </div>
       </div>
     </Card>

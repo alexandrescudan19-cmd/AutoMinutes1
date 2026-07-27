@@ -1,38 +1,42 @@
 import { cn } from '../cn.ts';
 
-// Aici scriem toate optiunile pe care le putem trimite componentei (props).
+// All the options we can pass to this component (props).
 export interface LoaderProps {
   size?: 'sm' | 'md' | 'lg';
   label?: string;
   className?: string;
 }
 
-// Pentru fiecare marime, clasele Tailwind potrivite.
-// Daca adaugi o marime noua mai sus, trebuie sa o adaugi si aici.
+// The matching Tailwind classes for each size.
+// If you add a new size above, add it here too.
 const sizes: Record<NonNullable<LoaderProps['size']>, string> = {
   sm: 'h-4 w-4 border-2',
   md: 'h-6 w-6 border-2',
   lg: 'h-10 w-10 border-[3px]',
 };
 
-// Componenta Loader. Daca nu trimiti "size", va fi "md" (mediu).
+// Loader component. If you don't pass "size", it defaults to "md" (medium).
 export default function Loader({ size = 'md', label, className }: LoaderProps) {
   return (
-    // role="status" ii spune cititorului de ecran ca ceva se incarca.
-    // cn() lipeste clasele noastre cu cele primite din afara (className).
+    // role="status" tells screen readers that something is loading.
+    // cn() merges our classes with the ones passed in from outside (className).
     <span role="status" aria-live="polite" className={cn('inline-flex items-center gap-2', className)}>
 
-        {/* Cerculetul care se invarte. E facut doar din CSS: */}
+        {/* The spinning circle. Made purely with CSS: */}
 
       <span
 
         aria-hidden="true"
         className={cn('inline-block animate-spin rounded-full border-current border-t-transparent', sizes[size])}
       />
-      {/* Daca avem "label", il aratam. Daca nu, punem un text ascuns
-          "Se incarca" doar pentru cititorul de ecran. */}
+      {/* If we have a "label", show it. If not, add hidden text
+          "Loading" just for screen readers. */}
 
-      {label ? <span className="text-sm text-gray-600">{label}</span> : <span className="sr-only">Loading</span>}
+      {label ? (
+        <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+      ) : (
+        <span className="sr-only">Loading</span>
+      )}
 
     </span>
   );

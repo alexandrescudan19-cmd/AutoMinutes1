@@ -21,7 +21,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [succes, setSucces] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async () => {
     setError("");
@@ -38,7 +38,7 @@ export default function RegisterPage() {
         email,
         password,
       });
-      setSucces(true);
+      setSuccess(true);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -49,7 +49,7 @@ export default function RegisterPage() {
   return (
     <AuthLayout>
       <Card title="Create account" className="w-full max-w-md">
-        {succes ? (
+        {success ? (
           <div className="flex flex-col items-center gap-3 text-center">
             <p className="text-green-700">
               Account created! Check your email to verify your account before

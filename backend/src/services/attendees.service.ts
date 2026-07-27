@@ -31,4 +31,12 @@ export class AttendeesService {
     }
     return attendee;
   }
+
+  async remove(id: string): Promise<Attendee> {
+    const attendee = await this.attendeesRepository.remove(id);
+    if (!attendee) {
+      throw new NotFoundException(`Attendee #${id} not found`);
+    }
+    return attendee;
+  }
 }
