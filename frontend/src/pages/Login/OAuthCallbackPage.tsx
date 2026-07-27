@@ -36,7 +36,7 @@ export default function OAuthCallbackPage() {
   }, [searchParams, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <Card title="Signing you in" className="w-full max-w-md">
         <div className="flex justify-center">
           <Loader label="Completing Google sign in..." />

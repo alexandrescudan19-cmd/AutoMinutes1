@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 
 export interface AuthLayoutProps {
   children: ReactNode;
@@ -17,15 +17,15 @@ export default function AuthLayout({
   title = "Meetings, minus the busywork.",
   subtitle = "AutoMinutes turns every meeting into clean notes, summaries, and action items — automatically.",
 }: AuthLayoutProps) {
-  // Auth pages never show dark mode - the toggle only lives inside AppLayout, but
-  // the "dark" class can still be lingering on <html> from a previous logged-in session.
-  useEffect(() => {
-    document.documentElement.classList.remove("dark");
-  }, []);
-
   return (
     <div className="flex min-h-screen">
       <div className="relative hidden w-2/5 flex-col justify-center overflow-hidden bg-brand px-12 py-16 text-white lg:flex">
+        <div className="pointer-events-none absolute -left-10 -top-16 h-56 w-56 rounded-full border-4 border-[#0095f6]/60 dark:border-[#7c3aed]/60" />
+        <div className="pointer-events-none absolute right-[-4rem] top-1/4 h-40 w-40 rounded-full border-4 border-[#0095f6]/50 dark:border-[#7c3aed]/50" />
+        <div className="pointer-events-none absolute bottom-24 left-10 h-28 w-28 rounded-full border-4 border-[#0095f6]/50 dark:border-[#7c3aed]/50" />
+        <div className="pointer-events-none absolute -bottom-16 right-8 h-64 w-64 rounded-full border-4 border-[#0095f6]/60 dark:border-[#7c3aed]/60" />
+        <div className="pointer-events-none absolute right-1/3 top-10 h-16 w-16 rounded-full border-4 border-[#0095f6]/40 dark:border-[#7c3aed]/40" />
+
         <div className="relative z-10">
           <h1 className="text-3xl font-semibold leading-tight">{title}</h1>
           <p className="mt-4 max-w-sm text-white/75">{subtitle}</p>
@@ -57,7 +57,7 @@ export default function AuthLayout({
         </div>
       </div>
 
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-gray-50 px-4 py-12">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-gray-50 px-4 py-12 dark:bg-gray-950">
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/10 blur-3xl" />
 
         <div className="relative z-10 flex w-full flex-col items-center">
