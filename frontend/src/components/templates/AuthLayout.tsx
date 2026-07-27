@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 export interface AuthLayoutProps {
   children: ReactNode;
@@ -17,6 +17,12 @@ export default function AuthLayout({
   title = "Meetings, minus the busywork.",
   subtitle = "AutoMinutes turns every meeting into clean notes, summaries, and action items — automatically.",
 }: AuthLayoutProps) {
+  // Auth pages never show dark mode - the toggle only lives inside AppLayout, but
+  // the "dark" class can still be lingering on <html> from a previous logged-in session.
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   return (
     <div className="flex min-h-screen">
       <div className="relative hidden w-2/5 flex-col justify-center overflow-hidden bg-brand px-12 py-16 text-white lg:flex">

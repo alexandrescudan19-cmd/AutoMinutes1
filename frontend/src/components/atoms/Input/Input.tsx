@@ -3,20 +3,20 @@ import { cn } from '../cn.ts';
 import { FieldWrapper } from '../FieldWrapper.tsx';
 import { getFieldDescribedBy } from '../fieldDescribedBy.ts';
 
-// Mostenim toate atributele unui <input> normal (type, placeholder, value, onChange...)
-// si adaugam ale noastre: label, error, hint
+// Inherits all the normal <input> attributes (type, placeholder, value, onChange...)
+// and adds our own: label, error, hint
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;   // eticheta de deasupra campului
-  error?: string;   // mesaj de eroare (rosu) sub camp
-  hint?: string;    // text ajutator (gri) sub camp, cand nu e eroare
+  label?: string;   // label above the field
+  error?: string;   // error message (red) below the field
+  hint?: string;    // helper text (gray) below the field, when there's no error
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, hint, id, className, required, ...props },
   ref,
 ) {
-  // useId genereaza un id unic, ca label-ul sa fie legat corect de input
-  // (important pentru accesibilitate: click pe label = focus pe input)
+  // useId generates a unique id, so the label is correctly linked to the input
+  // (important for accessibility: clicking the label = focus on the input)
   const autoId = useId();
   const inputId = id ?? autoId;
   const describedBy = getFieldDescribedBy(inputId, error, hint);
@@ -31,8 +31,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         aria-describedby={describedBy}
         className={cn(
           'h-10 rounded-lg border bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 transition-colors ' +
-            'focus-visible:outline-none focus-visible:ring-2 disabled:bg-gray-50 disabled:opacity-60',
-          error ? 'border-red-400 focus-visible:ring-red-400' : 'border-gray-300 focus-visible:ring-brand',
+            'focus-visible:outline-none focus-visible:ring-2 disabled:bg-gray-50 disabled:opacity-60 ' +
+            'dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:disabled:bg-gray-800',
+          error
+            ? 'border-red-400 focus-visible:ring-red-400 dark:border-red-500'
+            : 'border-gray-300 focus-visible:ring-brand dark:border-gray-700',
           className,
         )}
         {...props}

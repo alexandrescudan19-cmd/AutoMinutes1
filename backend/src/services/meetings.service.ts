@@ -37,6 +37,15 @@ export type MeetingHistoryItem = Meeting & {
   actionItemsCount: number;
 };
 
+// Participants only ever reach Google Calendar / Invitation / Notification records
+// after normalizeParticipants() has filtered out anyone without an email - only they
+// can actually be invited. This type reflects that guarantee to the rest of the class.
+type NormalizedParticipant = {
+  name: string;
+  email: string;
+  roleInMeeting: string;
+};
+
 @Injectable()
 export class MeetingsService {
   constructor(
@@ -55,6 +64,7 @@ export class MeetingsService {
   async create(createMeetingDto: CreateMeetingDto, user?: AuthenticatedUser): Promise<Meeting> {
     const startDateTime = new Date(createMeetingDto.startDateTime);
     const endDateTime = new Date(createMeetingDto.endDateTime);
+    const ownerId = user?.userId ?? createMeetingDto.ownerId;
     const participants = this.normalizeParticipants(createMeetingDto.participants);
 
     const existingAttendees = (
@@ -76,7 +86,6 @@ export class MeetingsService {
     let googleMeetLink = createMeetingDto.googleMeetLink;
 
     if (createMeetingDto.createGoogleCalendarEvent) {
-      const ownerId = user?.userId ?? createMeetingDto.ownerId;
       const refreshToken = await this.getOwnerRefreshToken(ownerId);
       const calendarEvent = await this.googleCalendarService.createEvent(
         {
@@ -95,7 +104,7 @@ export class MeetingsService {
 
     const meeting = await this.meetingsRepository.create({
       ...createMeetingDto,
-      ownerId: user?.userId ?? createMeetingDto.ownerId,
+      ownerId,
       startDateTime,
       endDateTime,
       googleCalendarEventId,
@@ -115,6 +124,18 @@ export class MeetingsService {
         }),
       ),
     );
+
+    // The creator is always the organizer - added as an attendee so they show up
+    // in the attendees list, pinned first in the UI regardless of array order.
+    const ownerUser = await this.usersRepository.findOne(ownerId);
+    const organizerAttendee = ownerUser
+      ? await this.attendeesRepository.create({
+          name: `${ownerUser.firstName} ${ownerUser.lastName}`.trim() || ownerUser.email,
+          email: ownerUser.email,
+          roleInMeeting: 'Organizer',
+          attendanceStatus: AttendanceStatus.Accepted,
+        })
+      : undefined;
 
     const shouldSendInvitations = createMeetingDto.sendInAppInvitations ?? true;
     const invitations = shouldSendInvitations
@@ -146,6 +167,7 @@ export class MeetingsService {
 
     const updatedMeeting = await this.meetingsRepository.update(meeting.id, {
       attendeeIds: [
+        ...(organizerAttendee ? [organizerAttendee.id] : []),
         ...(createMeetingDto.attendeeIds ?? []),
         ...attendees.map((attendee) => attendee.id),
       ],
@@ -186,8 +208,23 @@ export class MeetingsService {
     const total = sortedMeetings.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
-    const pageItems = sortedMeetings.slice((safePage - 1) * pageSize, safePage * pageSize);
-    const items = await this.withActionItemsCount(pageItems);
+
+    // Calculam action items pentru toate rezultatele filtrate (nu doar pagina curenta),
+    // ca statisticile de mai sus sa reflecte intregul set filtrat, nu doar pagina afisata.
+    const annotatedMeetings = await this.withActionItemsCount(sortedMeetings);
+    const items = annotatedMeetings.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+    const stats = {
+      total,
+      processing: filteredMeetings.filter((meeting) => meeting.aiStatus === AiStatus.Processing)
+        .length,
+      completed: filteredMeetings.filter((meeting) => meeting.aiStatus === AiStatus.Completed)
+        .length,
+      openActionItems: annotatedMeetings.reduce(
+        (sum, meeting) => sum + meeting.actionItemsCount,
+        0,
+      ),
+    };
 
     return {
       items,
@@ -195,6 +232,7 @@ export class MeetingsService {
       page: safePage,
       pageSize,
       pageCount,
+      stats,
     };
   }
 
@@ -313,12 +351,16 @@ export class MeetingsService {
     await this.assertCanManageMeeting(id, user);
 
     const meeting = await this.findOne(id, user);
-    if ([MeetingStatus.Completed, MeetingStatus.Cancelled].includes(meeting.status)) {
-      throw new BadRequestException('Nu poti trimite invitatii noi pentru un meeting incheiat.');
-    }
 
-    const participants = this.normalizeParticipants(addMeetingInvitationsDto.participants);
-    if (participants.length === 0) {
+    const submittedParticipants = (addMeetingInvitationsDto.participants ?? [])
+      .filter((participant) => participant.name?.trim())
+      .map((participant) => ({
+        name: participant.name.trim(),
+        email: participant.email?.trim().toLowerCase() || undefined,
+        roleInMeeting: participant.roleInMeeting?.trim() || 'Participant',
+      }));
+
+    if (submittedParticipants.length === 0) {
       throw new BadRequestException('Adauga cel putin un participant valid.');
     }
 
@@ -326,19 +368,35 @@ export class MeetingsService {
     const existingEmails = new Set(
       existingInvitations.map((invitation) => invitation.participantEmail.toLowerCase().trim()),
     );
-    const newParticipants = participants.filter(
-      (participant) => !existingEmails.has(participant.email),
+
+    // Attendees without an email can't be invited (no calendar/email to send to), so
+    // the duplicate-invitation check only applies to those who have one.
+    const newParticipants = submittedParticipants.filter(
+      (participant) => !participant.email || !existingEmails.has(participant.email),
     );
 
     if (newParticipants.length === 0) {
       throw new BadRequestException('Participantii sunt deja invitati la acest meeting.');
     }
 
-    if (meeting.googleCalendarEventId) {
+    const invitableParticipants = newParticipants.filter(
+      (participant): participant is typeof participant & { email: string } => !!participant.email,
+    );
+
+    // A finished/cancelled meeting can't have new calendar/email invitations sent out,
+    // but attendees without an email (just kept for the record) are still fine to add.
+    if (
+      invitableParticipants.length > 0 &&
+      [MeetingStatus.Completed, MeetingStatus.Cancelled].includes(meeting.status)
+    ) {
+      throw new BadRequestException('Nu poti trimite invitatii noi pentru un meeting incheiat.');
+    }
+
+    if (meeting.googleCalendarEventId && invitableParticipants.length > 0) {
       const refreshToken = await this.getOwnerRefreshToken(meeting.ownerId);
       await this.googleCalendarService.addAttendees(
         meeting.googleCalendarEventId,
-        newParticipants,
+        invitableParticipants,
         refreshToken,
       );
     }
@@ -348,13 +406,13 @@ export class MeetingsService {
         this.attendeesRepository.create({
           name: participant.name,
           email: participant.email,
-          roleInMeeting: participant.roleInMeeting ?? 'Participant',
+          roleInMeeting: participant.roleInMeeting,
           attendanceStatus: AttendanceStatus.Invited,
         }),
       ),
     );
     const invitations = await Promise.all(
-      newParticipants.map((participant) =>
+      invitableParticipants.map((participant) =>
         this.invitationsRepository.create({
           meetingId: meeting.id,
           participantEmail: participant.email,
@@ -363,7 +421,7 @@ export class MeetingsService {
       ),
     );
     const notifications = await Promise.all(
-      newParticipants.map((participant) =>
+      invitableParticipants.map((participant) =>
         this.notificationsRepository.create({
           title: `Invitatie la ${meeting.title}`,
           message: this.buildInvitationMessage(meeting, meeting.googleMeetLink),
@@ -392,9 +450,9 @@ export class MeetingsService {
       attendees,
       invitations,
       notifications,
-      skippedEmails: participants
-        .filter((participant) => existingEmails.has(participant.email))
-        .map((participant) => participant.email),
+      skippedEmails: submittedParticipants
+        .filter((participant) => participant.email && existingEmails.has(participant.email))
+        .map((participant) => participant.email as string),
     };
   }
 
@@ -479,11 +537,13 @@ export class MeetingsService {
 
   private normalizeParticipants(
     participants: CreateMeetingParticipantDto[] = [],
-  ): CreateMeetingParticipantDto[] {
+  ): NormalizedParticipant[] {
     return participants
-      .filter((participant) => participant.email?.trim())
+      .filter(
+        (participant): participant is CreateMeetingParticipantDto & { email: string } =>
+          !!participant.email?.trim(),
+      )
       .map((participant) => ({
-        ...participant,
         name: participant.name?.trim() || participant.email.trim(),
         email: participant.email.toLowerCase().trim(),
         roleInMeeting: participant.roleInMeeting?.trim() || 'Participant',

@@ -7,10 +7,11 @@ import {
   updateMeeting as updateMeetingRequest,
 } from "../services/meetings";
 import type {
-  CreateMeetingInput,
   AiStatus,
+  CreateMeetingInput,
   MeetingHistoryItem,
   MeetingHistorySort,
+  MeetingHistoryStats,
   MeetingStatus,
   UpdateMeetingInput,
 } from "../types";
@@ -22,12 +23,15 @@ interface MeetingsFilters {
   sort: MeetingHistorySort;
 }
 
+const EMPTY_STATS: MeetingHistoryStats = { total: 0, processing: 0, completed: 0, openActionItems: 0 };
+
 interface MeetingsState {
   meetings: MeetingHistoryItem[];
   total: number;
   page: number;
   pageSize: number;
   pageCount: number;
+  stats: MeetingHistoryStats;
   filters: MeetingsFilters;
   isLoading: boolean;
   error: string;
@@ -45,6 +49,7 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
   page: 1,
   pageSize: 10,
   pageCount: 1,
+  stats: EMPTY_STATS,
   filters: { search: "", sort: "newest" },
   isLoading: false,
   error: "",
@@ -67,10 +72,11 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
         page: response.page,
         pageSize: response.pageSize,
         pageCount: response.pageCount,
+        stats: response.stats,
         isLoading: false,
       });
     } catch {
-      set({ error: "Nu am putut incarca sedintele. Incearca din nou.", isLoading: false });
+      set({ error: "Couldn't load meetings. Please try again.", isLoading: false });
     }
   },
 
@@ -87,11 +93,11 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
   createMeeting: async (input) => {
     try {
       const meeting = await createMeetingRequest(input);
-      toast.success("Sedinta a fost creata.");
+      toast.success("Meeting created.");
       await get().fetchMeetings();
       return { ...meeting, actionItemsCount: 0 };
     } catch {
-      toast.error("Nu am putut crea sedinta.");
+      toast.error("Couldn't create the meeting.");
       return undefined;
     }
   },
@@ -99,20 +105,20 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
   updateMeeting: async (id, input) => {
     try {
       await updateMeetingRequest(id, input);
-      toast.success("Sedinta a fost actualizata.");
+      toast.success("Meeting updated.");
       await get().fetchMeetings();
     } catch {
-      toast.error("Nu am putut actualiza sedinta.");
+      toast.error("Couldn't update the meeting.");
     }
   },
 
   deleteMeeting: async (id) => {
     try {
       await deleteMeetingRequest(id);
-      toast.success("Sedinta a fost stearsa.");
+      toast.success("Meeting deleted.");
       await get().fetchMeetings();
     } catch {
-      toast.error("Nu am putut sterge sedinta.");
+      toast.error("Couldn't delete the meeting.");
     }
   },
 }));

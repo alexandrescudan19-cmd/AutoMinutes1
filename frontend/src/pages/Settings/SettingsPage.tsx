@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Badge, Button, Card } from "../../components/atoms";
 import { AppLayout } from "../../components/templates";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
-import { api } from "../../services/api";
+import { api, API_BASE_URL } from "../../services/api";
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -14,11 +14,11 @@ export default function SettingsPage() {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       if (searchParams.get("googleConnected")) {
-        setMessage("Contul Google a fost conectat cu succes.");
+        setMessage("Your Google account was connected successfully.");
         void refetch();
         setSearchParams({}, { replace: true });
       } else if (searchParams.get("googleConnectError")) {
-        setMessage("Conectarea contului Google a esuat. Incearca din nou.");
+        setMessage("Connecting your Google account failed. Please try again.");
         setSearchParams({}, { replace: true });
       }
     }, 0);
@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
   const handleConnect = () => {
     const token = localStorage.getItem("accessToken");
-    window.location.href = `http://localhost:3500/auth/google/connect?token=${token}`;
+    window.location.href = `${API_BASE_URL}/auth/google/connect?token=${token}`;
   };
 
   const handleDisconnect = async () => {
@@ -44,24 +44,24 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="text-xl font-semibold text-gray-900">Setari</h1>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h1>
 
         {message && <p className="text-sm text-brand">{message}</p>}
 
         <Card title="Google Calendar">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-700">
-                Conecteaza-ti contul Google pentru ca sedintele pe care le creezi sa apara
-                pe propriul tau calendar, cu tine ca organizator.
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Connect your Google account so the meetings you create show up on your
+                own calendar, with you as the organizer.
               </p>
               <div className="mt-2">
                 {loading ? (
-                  <Badge variant="neutral">Se verifica...</Badge>
+                  <Badge variant="neutral">Checking...</Badge>
                 ) : connected ? (
-                  <Badge variant="success">Conectat</Badge>
+                  <Badge variant="success">Connected</Badge>
                 ) : (
-                  <Badge variant="warning">Neconectat</Badge>
+                  <Badge variant="warning">Not connected</Badge>
                 )}
               </div>
             </div>
@@ -71,10 +71,10 @@ export default function SettingsPage() {
                 isLoading={isDisconnecting}
                 onClick={() => void handleDisconnect()}
               >
-                Deconecteaza
+                Disconnect
               </Button>
             ) : (
-              <Button onClick={handleConnect}>Conecteaza Google Calendar</Button>
+              <Button onClick={handleConnect}>Connect Google Calendar</Button>
             )}
           </div>
         </Card>

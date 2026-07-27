@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
+  themePreference?: "light" | "dark" | null;
   [key: string]: unknown;
 }
 

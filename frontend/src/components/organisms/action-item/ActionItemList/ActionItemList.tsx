@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { FiAlertTriangle, FiCheckSquare, FiEdit2, FiTrash2 } from "react-icons/fi";
 import toast from "react-hot-toast";
-import { Badge, Button, Input, Select } from "../../../atoms";
-import { ConfirmDialog } from "../../../molecules/common";
+import { Button, Input, Select } from "../../../atoms";
+import { ConfirmDialog, EditActions, EmptyState, StatusBadge } from "../../../molecules/common";
 import { deleteActionItem, updateActionItem } from "../../../../services/actionItems";
+import { formatDate, toDateInputValue } from "../../../../utils/date.ts";
 import type { ActionItem, ActionItemListItem, ActionItemStatus } from "../../../../types";
 
 export interface ActionItemListProps {
@@ -30,20 +31,6 @@ function hasMeetingTitle(item: ActionItem | ActionItemListItem): item is ActionI
   return "meetingTitle" in item;
 }
 
-function formatDate(raw?: string) {
-  if (!raw) return "";
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function toDateInputValue(raw?: string) {
-  if (!raw) return "";
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
-}
-
 function getGroupKey(status: string): ActionItemStatus | "Unknown" {
   if (status === "Pending" || status === "In Progress" || status === "Completed") {
     return status;
@@ -56,13 +43,6 @@ function isOverdue(item: ActionItem) {
   const dueDate = new Date(item.dueDate);
   if (Number.isNaN(dueDate.getTime())) return false;
   return dueDate.getTime() < Date.now();
-}
-
-function statusVariant(status: string) {
-  if (status === "Completed") return "success" as const;
-  if (status === "In Progress") return "warning" as const;
-  if (status === "Pending") return "info" as const;
-  return "neutral" as const;
 }
 
 export default function ActionItemList({
@@ -110,11 +90,11 @@ export default function ActionItemList({
         dueDate: editDueDate ? new Date(editDueDate).toISOString() : undefined,
         status: editStatus,
       });
-      toast.success("Action item actualizat.");
+      toast.success("Action item updated.");
       setEditingId("");
       onChanged();
     } catch {
-      toast.error("Nu am putut actualiza action item-ul.");
+      toast.error("Couldn't update the action item.");
     } finally {
       setIsSaving(false);
     }
@@ -128,7 +108,7 @@ export default function ActionItemList({
       });
       onChanged();
     } catch {
-      toast.error("Nu am putut actualiza statusul.");
+      toast.error("Couldn't update the status.");
     } finally {
       setBusyToggleId("");
     }
@@ -138,11 +118,11 @@ export default function ActionItemList({
     setIsDeleting(true);
     try {
       await deleteActionItem(pendingDeleteId);
-      toast.success("Action item sters.");
+      toast.success("Action item deleted.");
       setPendingDeleteId("");
       onChanged();
     } catch {
-      toast.error("Nu am putut sterge action item-ul.");
+      toast.error("Couldn't delete the action item.");
     } finally {
       setIsDeleting(false);
     }
@@ -150,10 +130,10 @@ export default function ActionItemList({
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-200 text-gray-500">
-        <FiCheckSquare />
-        <p className="text-sm">Nu exista action items pentru filtrele curente.</p>
-      </div>
+      <EmptyState
+        icon={<FiCheckSquare />}
+        title="No action items match the current filters."
+      />
     );
   }
 
@@ -161,8 +141,8 @@ export default function ActionItemList({
     <div className="flex flex-col gap-5">
       {groupedItems.map((group) => (
         <section key={group.key} className="grid gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            {group.label} <span className="text-gray-400">{group.items.length}</span>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {group.label} <span className="text-gray-400 dark:text-gray-500">{group.items.length}</span>
           </h2>
           <div className="grid gap-2">
             {group.items.map((item) => {
@@ -170,7 +150,7 @@ export default function ActionItemList({
                 return (
                   <div
                     key={item.id}
-                    className="grid gap-2 rounded-lg border border-brand/40 bg-brand/5 p-3"
+                    className="grid gap-2 rounded-lg border border-brand/40 bg-brand/5 p-3 dark:bg-brand/10"
                   >
                     <Input
                       label="Task"
@@ -179,12 +159,12 @@ export default function ActionItemList({
                     />
                     <div className="grid gap-2 sm:grid-cols-3">
                       <Input
-                        label="Responsabil"
+                        label="Assignee"
                         value={editResponsiblePerson}
                         onChange={(e) => setEditResponsiblePerson(e.target.value)}
                       />
                       <Input
-                        label="Termen"
+                        label="Due date"
                         type="date"
                         value={editDueDate}
                         onChange={(e) => setEditDueDate(e.target.value)}
@@ -196,25 +176,11 @@ export default function ActionItemList({
                         onChange={(e) => setEditStatus(e.target.value as ActionItemStatus)}
                       />
                     </div>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={cancelEditing}
-                        disabled={isSaving}
-                      >
-                        Anuleaza
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        isLoading={isSaving}
-                        onClick={() => void saveEditing()}
-                      >
-                        Salveaza
-                      </Button>
-                    </div>
+                    <EditActions
+                      onCancel={cancelEditing}
+                      onConfirm={() => void saveEditing()}
+                      isLoading={isSaving}
+                    />
                   </div>
                 );
               }
@@ -224,8 +190,8 @@ export default function ActionItemList({
               return (
                 <div
                   key={item.id}
-                  className={`grid items-center gap-3 rounded-lg border bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] ${
-                    overdue ? "border-red-400" : "border-gray-200"
+                  className={`grid items-center gap-3 rounded-lg border bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] dark:bg-gray-900 ${
+                    overdue ? "border-red-400 dark:border-red-700" : "border-gray-200 dark:border-gray-700"
                   }`}
                 >
                   <input
@@ -237,25 +203,25 @@ export default function ActionItemList({
                     aria-label={item.task}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">{item.task}</p>
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{item.task}</p>
                     {showMeetingTitle && hasMeetingTitle(item) && (
-                      <p className="truncate text-xs text-gray-500">{item.meetingTitle}</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
                     )}
                   </div>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     {item.responsiblePerson || "Unassigned"}
                   </div>
                   <div
                     className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-sm ${
                       overdue
-                        ? "border-red-200 bg-red-50 text-red-700"
-                        : "border-gray-200 bg-gray-50 text-gray-700"
+                        ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
+                        : "border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
                     }`}
                   >
                     {overdue && <FiAlertTriangle className="shrink-0" aria-hidden="true" />}
                     {formatDate(item.dueDate) || "No due date"}
                   </div>
-                  <Badge variant={statusVariant(item.status)}>{item.status}</Badge>
+                  <StatusBadge status={item.status} />
                   <div className="flex gap-1">
                     {showMeetingTitle && hasMeetingTitle(item) && onOpenMeeting && (
                       <Button
@@ -270,16 +236,16 @@ export default function ActionItemList({
                     <button
                       type="button"
                       onClick={() => startEditing(item)}
-                      aria-label="Editeaza"
-                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                      aria-label="Edit"
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                     >
                       <FiEdit2 />
                     </button>
                     <button
                       type="button"
                       onClick={() => setPendingDeleteId(item.id)}
-                      aria-label="Sterge"
-                      className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      aria-label="Delete"
+                      className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:text-gray-500 dark:hover:bg-red-950/50 dark:hover:text-red-400"
                     >
                       <FiTrash2 />
                     </button>
@@ -293,7 +259,7 @@ export default function ActionItemList({
 
       <ConfirmDialog
         isOpen={!!pendingDeleteId}
-        message="Sigur vrei sa stergi acest action item?"
+        message="Are you sure you want to delete this action item?"
         variant="danger"
         isLoading={isDeleting}
         onConfirm={() => void confirmDelete()}

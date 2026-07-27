@@ -42,6 +42,9 @@ export class User {
   @Prop({ type: String, default: null })
   googleRefreshTokenEncrypted!: string | null;
 
+  @Prop({ type: String, enum: ['light', 'dark'], default: null })
+  themePreference!: 'light' | 'dark' | null;
+
   createdAt!: string;
   updatedAt!: string;
 }

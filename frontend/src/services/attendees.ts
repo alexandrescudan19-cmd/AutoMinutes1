@@ -16,3 +16,7 @@ export function createAttendee(input: CreateAttendeeInput) {
 export function updateAttendee(id: string, input: UpdateAttendeeInput) {
   return api.patch<Attendee>(`/attendees/${id}`, input).then((res) => res.data);
 }
+
+export function deleteAttendee(id: string) {
+  return api.delete<void>(`/attendees/${id}`).then((res) => res.data);
+}

@@ -9,6 +9,7 @@ import MeetingAttendeesPanel from "../../../organisms/attendee/MeetingAttendeesP
 import AiResultsPanel from "../../../organisms/ai/AiResultsPanel/AiResultsPanel.tsx";
 import { getMeeting } from "../../../../services/meetings";
 import { useMeetingsStore } from "../../../../stores/meetingsStore";
+import { formatDateRange, toDateTimeLocalValue } from "../../../../utils/date.ts";
 import type { Meeting } from "../../../../types";
 
 export interface MeetingDetailsModalProps {
@@ -18,29 +19,9 @@ export interface MeetingDetailsModalProps {
 
 type Tab = "overview" | "attendees" | "ai";
 
-function formatRange(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  const dateLabel = s.toLocaleDateString("ro-RO", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const startTime = s.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
-  const endTime = e.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
-  return `${dateLabel} · ${startTime} - ${endTime}`;
-}
-
-function toDateTimeLocal(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (value: number) => value.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
-  { key: "attendees", label: "Participanti" },
+  { key: "attendees", label: "Attendees" },
   { key: "ai", label: "Transcript & AI" },
 ];
 
@@ -63,7 +44,7 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
       const data = await getMeeting(id);
       setMeeting(data);
     } catch {
-      setError("Nu am putut incarca sedinta.");
+      setError("Couldn't load the meeting.");
     } finally {
       setIsLoading(false);
     }
@@ -118,12 +99,15 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
 
   return (
     <Modal isOpen={!!meetingId} onClose={onClose} title={meeting?.title ?? ""} size="xl">
-      {isLoading && <p className="text-sm text-gray-500">Se incarca...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {/* Only shown for the very first fetch (no meeting data yet) - background
+          refreshes (e.g. the AI tab's processing poll) reuse the same isLoading
+          flag but shouldn't visibly flash this in and out of the modal every time. */}
+      {isLoading && !meeting && <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {meeting && (
         <div className="flex flex-col gap-4">
-          <div className="flex gap-1 border-b border-gray-100">
+          <div className="flex gap-1 border-b border-gray-100 dark:border-gray-800">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -132,7 +116,7 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
                 className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.key
                     ? "border-brand text-brand"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
+                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
               >
                 {tab.label}
@@ -140,21 +124,21 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
             ))}
           </div>
 
-          <div className="min-h-[480px]">
+          <div className="h-[600px] overflow-y-auto">
             {activeTab === "overview" &&
               (isEditing ? (
                 <MeetingForm
                   initialValues={{
                     title: meeting.title,
                     description: meeting.description ?? "",
-                    startDateTime: toDateTimeLocal(meeting.startDateTime),
-                    endDateTime: toDateTimeLocal(meeting.endDateTime),
+                    startDateTime: toDateTimeLocalValue(meeting.startDateTime),
+                    endDateTime: toDateTimeLocalValue(meeting.endDateTime),
                     status: meeting.status,
                     attendeeIds: meeting.attendeeIds,
                   }}
                   onSubmit={handleUpdate}
                   onCancel={() => setIsEditing(false)}
-                  submitLabel="Salveaza modificarile"
+                  submitLabel="Save changes"
                 />
               ) : (
                 <div className="flex flex-col gap-4">
@@ -163,16 +147,16 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
                     <StatusBadge status={meeting.aiStatus} />
                   </div>
 
-                  <p className="text-sm text-gray-600">
-                    {formatRange(meeting.startDateTime, meeting.endDateTime)}
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {formatDateRange(meeting.startDateTime, meeting.endDateTime)}
                   </p>
 
                   {meeting.description && (
-                    <p className="text-sm text-gray-700">{meeting.description}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{meeting.description}</p>
                   )}
 
-                  <p className="text-sm text-gray-500">
-                    {meeting.attendeeIds.length} participanti
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {meeting.attendeeIds.length} attendees
                   </p>
 
                   {meeting.googleMeetLink && (
@@ -180,21 +164,21 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
                       href={meeting.googleMeetLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex w-fit items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-medium text-brand hover:bg-brand/10"
+                      className="flex w-fit items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-medium text-brand hover:bg-brand/10 dark:hover:bg-brand/20"
                     >
                       <FiVideo aria-hidden="true" />
-                      Alatura-te pe Google Meet
+                      Join on Google Meet
                     </a>
                   )}
 
-                  <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                  <div className="flex justify-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
                     <Button
                       type="button"
                       variant="secondary"
                       leftIcon={<FiEdit2 aria-hidden="true" />}
                       onClick={() => setIsEditing(true)}
                     >
-                      Editeaza
+                      Edit
                     </Button>
                     <Button
                       type="button"
@@ -202,7 +186,7 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
                       leftIcon={<FiTrash2 aria-hidden="true" />}
                       onClick={() => setIsDeleteOpen(true)}
                     >
-                      Sterge
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -221,8 +205,8 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
 
       <ConfirmDialog
         isOpen={isDeleteOpen}
-        title="Sterge sedinta?"
-        message="Aceasta actiune este ireversibila. Sigur vrei sa stergi aceasta sedinta?"
+        title="Delete meeting?"
+        message="This action is irreversible. Are you sure you want to delete this meeting?"
         variant="danger"
         isLoading={isDeleting}
         onConfirm={() => void handleDelete()}

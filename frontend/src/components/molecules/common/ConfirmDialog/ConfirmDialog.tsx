@@ -5,10 +5,10 @@ import Button from '../../../atoms/Button/Button.tsx';
 export interface ConfirmDialogProps {
   isOpen: boolean;
   title?: string;
-  message: ReactNode;                    // intrebarea (ex: "Sigur stergi aceasta intalnire?")
+  message: ReactNode;                    // the question (e.g. "Delete this meeting?")
   confirmLabel?: string;                
   cancelLabel?: string;                 
-  variant?: 'primary' | 'danger';        // culoarea butonului de confirmare
+  variant?: 'primary' | 'danger';        // confirm button color
   isLoading?: boolean;                  
   onConfirm: () => void;               
   onCancel: () => void;                 
@@ -16,10 +16,10 @@ export interface ConfirmDialogProps {
 
 export default function ConfirmDialog({
   isOpen,
-  title = 'Ești sigur?',
+  title = 'Are you sure?',
   message,
-  confirmLabel = 'Confirmă',
-  cancelLabel = 'Anulează',
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   variant = 'danger',
   isLoading = false,
   onConfirm,
@@ -42,7 +42,7 @@ export default function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm text-gray-600">{message}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
     </Modal>
   );
 }

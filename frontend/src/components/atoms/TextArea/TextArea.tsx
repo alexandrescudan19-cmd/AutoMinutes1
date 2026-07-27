@@ -29,8 +29,11 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextAre
         aria-describedby={describedBy}
         className={cn(
           'rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-colors ' +
-            'focus-visible:outline-none focus-visible:ring-2 disabled:bg-gray-50 disabled:opacity-60 resize-y',
-          error ? 'border-red-400 focus-visible:ring-red-400' : 'border-gray-300 focus-visible:ring-brand',
+            'focus-visible:outline-none focus-visible:ring-2 disabled:bg-gray-50 disabled:opacity-60 resize-y ' +
+            'dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:disabled:bg-gray-800',
+          error
+            ? 'border-red-400 focus-visible:ring-red-400 dark:border-red-500'
+            : 'border-gray-300 focus-visible:ring-brand dark:border-gray-700',
           className,
         )}
         {...props}

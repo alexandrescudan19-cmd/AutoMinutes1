@@ -1,8 +1,97 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand: #7c3aed;
   --color-brand-dark: #6d28d9;
+}
+
+.dark {
+  /* Instagram-style dark mode: true neutral (no blue tint) grays, laid out as
+     four clean elevation tiers (page < card/sidebar < hover/popover < border),
+     plus Instagram's own blue as the single accent instead of the light-mode purple. */
+  --color-brand: #0095f6;
+  --color-brand-dark: #0077c2;
+
+  --color-gray-50: #f7f7f7;
+  --color-gray-100: #ededed;
+  --color-gray-200: #d6d6d6;
+  --color-gray-300: #b3b3b3;
+  --color-gray-400: #909090;
+  --color-gray-500: #737373;
+  --color-gray-600: #3a3a3a;
+  --color-gray-700: #2a2a2a;
+  --color-gray-800: #1f1f1f;
+  --color-gray-900: #141414;
+  --color-gray-950: #0a0a0a;
+}
+
+/* "AI is thinking" shimmer - a Gemini/ChatGPT-style animated gradient sweeping
+   across the text, used while a transcript is being processed. */
+@keyframes ai-shimmer {
+  to {
+    background-position: -200% center;
+  }
+}
+
+.ai-shimmer-text {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-brand) 0%,
+    color-mix(in srgb, var(--color-brand) 30%, transparent) 50%,
+    var(--color-brand) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: ai-shimmer 2.2s linear infinite;
+}
+
+@keyframes ai-pulse-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.6;
+  }
+}
+
+.ai-pulse-icon {
+  animation: ai-pulse-ring 1.6s ease-in-out infinite;
+}
+
+/* Theme toggle transition: a circle grows from the toggle button and reveals the
+   new theme underneath it, instead of the whole page just cross-fading at once.
+   The circle's own animation is driven from useTheme.ts (it needs the button's
+   coordinates, which only exist at click time) - this just turns off the default
+   cross-fade so that manual animation is the only thing visible. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Going back to light: the dark screenshot shrinks away, so it has to sit above
+   the light one instead of below it (reverse of the normal stacking above). */
+html.theme-transition-reverse::view-transition-old(root) {
+  z-index: 2;
+}
+
+html.theme-transition-reverse::view-transition-new(root) {
+  z-index: 1;
 }
 
 :root {
@@ -37,24 +126,22 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+.dark {
+  --text: #b3b3b3;
+  --text-h: #f7f7f7;
+  --bg: #0a0a0a;
+  --border: #2a2a2a;
+  --code-bg: #141414;
+  --accent: #0095f6;
+  --accent-bg: rgba(0, 149, 246, 0.15);
+  --accent-border: rgba(0, 149, 246, 0.5);
+  --social-bg: rgba(42, 42, 42, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.6) 0 10px 15px -3px, rgba(0, 0, 0, 0.4) 0 4px 6px -2px;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+.dark #social .button-icon {
+  filter: invert(1) brightness(2);
 }
 
 #root {
@@ -67,6 +154,13 @@
 
 body {
   margin: 0;
+}
+
+/* Tailwind resets the native button cursor to "default" (to mimic OS
+   behavior) - we set it back to "pointer" everywhere, as long as the
+   button isn't disabled. */
+button:not(:disabled) {
+  cursor: pointer;
 }
 
 /* h1,
@@ -168,24 +262,22 @@ code {
   background: #f3f4f6;
 }
 
-@media (prefers-color-scheme: dark) {
-  * {
-    scrollbar-color: #4b5563 #ffffff;
-  }
+.dark * {
+  scrollbar-color: #2a2a2a #141414;
+}
 
-  *::-webkit-scrollbar-track {
-    background: #1f2028;
-  }
+.dark *::-webkit-scrollbar-track {
+  background: #141414;
+}
 
-  *::-webkit-scrollbar-corner {
-    background: #ffffff;
-  }
+.dark *::-webkit-scrollbar-corner {
+  background: #141414;
+}
 
-  *::-webkit-scrollbar-thumb {
-    background-color: #4b5563;
-  }
+.dark *::-webkit-scrollbar-thumb {
+  background-color: #2a2a2a;
+}
 
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: #6b7280;
-  }
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: #3a3a3a;
 }

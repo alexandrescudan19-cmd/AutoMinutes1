@@ -13,16 +13,16 @@ export function FieldWrapper({ label, required, id, error, hint, children }: Fie
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-gray-700">
+        <label htmlFor={id} className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {label}
-          {required && <span className="text-red-500"> *</span>}
+          {required && <span className="text-red-500 dark:text-red-400"> *</span>}
         </label>
       )}
       {children}
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-red-600">{error}</p>
+        <p id={`${id}-error`} className="text-xs text-red-600 dark:text-red-400">{error}</p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-gray-500">{hint}</p>
+        <p id={`${id}-hint`} className="text-xs text-gray-500 dark:text-gray-400">{hint}</p>
       ) : null}
     </div>
   );
