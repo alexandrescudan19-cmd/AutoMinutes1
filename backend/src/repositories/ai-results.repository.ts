@@ -40,6 +40,17 @@ export class AiResultsRepository {
     return aiResult ? this.toModel(aiResult) : undefined;
   }
 
+  async findLatestByMeetingAndTranscript(
+    meetingId: string,
+    transcriptId: string,
+  ): Promise<AIResult | undefined> {
+    const aiResult = await this.aiResultModel
+      .findOne({ meetingId, transcriptId })
+      .sort({ generatedAt: -1, createdAt: -1 })
+      .exec();
+    return aiResult ? this.toModel(aiResult) : undefined;
+  }
+
   async update(id: string, data: Partial<AIResult>): Promise<AIResult | undefined> {
     const rest = { ...data };
     delete rest.id;

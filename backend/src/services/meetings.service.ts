@@ -535,6 +535,42 @@ export class MeetingsService {
     return transcript;
   }
 
+  async findTranscriptVersionsForMeeting(id: string, user: AuthenticatedUser) {
+    const meeting = await this.findOne(id, user);
+    const transcripts = await this.transcriptsRepository.findByMeetingId(meeting.id);
+
+    return transcripts.map((transcript, index) => ({
+      ...transcript,
+      version: transcripts.length - index,
+      isCurrent: transcript.id === meeting.transcriptId?.toString(),
+    }));
+  }
+
+  async restoreTranscriptVersion(id: string, transcriptId: string, user: AuthenticatedUser) {
+    await this.assertCanManageMeeting(id, user);
+    const meeting = await this.findOne(id, user);
+    const transcript = await this.transcriptsRepository.findOne(transcriptId);
+    if (!transcript || transcript.meetingId.toString() !== meeting.id) {
+      throw new NotFoundException(`Transcript #${transcriptId} not found for meeting #${id}`);
+    }
+
+    const aiResult = await this.aiResultsRepository.findLatestByMeetingAndTranscript(
+      meeting.id,
+      transcript.id,
+    );
+    const updatedMeeting = await this.meetingsRepository.update(meeting.id, {
+      transcriptId: transcript.id,
+      aiResultId: aiResult?.id ?? null,
+      aiStatus: aiResult ? AiStatus.Completed : AiStatus.Idle,
+    });
+
+    return {
+      meeting: updatedMeeting ?? meeting,
+      transcript,
+      aiResult,
+    };
+  }
+
   private normalizeParticipants(
     participants: CreateMeetingParticipantDto[] = [],
   ): NormalizedParticipant[] {
