@@ -13,6 +13,8 @@ export interface MeetingFormValues {
   attendeeIds: string[];
   createGoogleCalendarEvent: boolean;
   transcript?: string;
+  transcriptFile?: File;
+  transcriptFileFormat?: string;
 }
 
 export interface MeetingFormProps {
@@ -38,6 +40,14 @@ const MIN_DATE = `${MIN_YEAR}-01-01`;
 const MAX_DATE = `${MAX_YEAR}-12-31`;
 
 type StepId = "details" | "schedule" | "attendees" | "google" | "transcript";
+
+function canPreviewTranscriptFile(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  return (
+    file.type.startsWith("text/") ||
+    ["txt", "csv", "json", "md", "srt", "vtt", "log"].includes(extension ?? "")
+  );
+}
 
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: string }) {
   return (
@@ -65,6 +75,10 @@ export default function MeetingForm({
     initialValues?.createGoogleCalendarEvent ?? false,
   );
   const [transcript, setTranscript] = useState(initialValues?.transcript ?? "");
+  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  const [transcriptFileFormat, setTranscriptFileFormat] = useState(
+    initialValues?.transcriptFileFormat ?? "text",
+  );
   const transcriptFileInputRef = useRef<HTMLInputElement>(null);
   const { connected: googleConnected, loading: googleStatusLoading } =
     useGoogleConnectionStatus();
@@ -168,6 +182,13 @@ export default function MeetingForm({
 
   const handleTranscriptFileChange = async (file: File | undefined) => {
     if (!file) return;
+    setTranscriptFile(file);
+    setTranscriptFileFormat(file.name.split(".").pop() || file.type || "file");
+    if (!canPreviewTranscriptFile(file)) {
+      setTranscript("");
+      return;
+    }
+
     const text = await file.text();
     setTranscript(text);
   };
@@ -193,6 +214,8 @@ export default function MeetingForm({
         attendeeIds,
         createGoogleCalendarEvent: isFutureMeeting && createGoogleCalendarEvent,
         transcript: !isFutureMeeting && transcript.trim() ? transcript.trim() : undefined,
+        transcriptFile: !isFutureMeeting ? transcriptFile ?? undefined : undefined,
+        transcriptFileFormat,
       });
     } catch {
       setError("Couldn't save the meeting. Please try again.");
@@ -361,7 +384,6 @@ export default function MeetingForm({
             <input
               ref={transcriptFileInputRef}
               type="file"
-              accept=".txt,text/plain"
               className="hidden"
               onChange={(e) => void handleTranscriptFileChange(e.target.files?.[0])}
             />
@@ -372,8 +394,14 @@ export default function MeetingForm({
               leftIcon={<FiUpload aria-hidden="true" />}
               onClick={() => transcriptFileInputRef.current?.click()}
             >
-              Upload .txt file
+              Upload transcript file
             </Button>
+            {transcriptFile && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Selected file: {transcriptFile.name}
+                {!transcript && " - preview unavailable for this file type"}
+              </p>
+            )}
           </div>
         )}
       </div>

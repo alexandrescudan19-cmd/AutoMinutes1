@@ -1,10 +1,15 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import * as dns from 'node:dns';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
+
+if (process.env.MONGODB_URI?.startsWith('mongodb+srv://')) {
+  dns.setServers((process.env.DNS_SERVERS ?? '1.1.1.1,8.8.8.8').split(','));
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

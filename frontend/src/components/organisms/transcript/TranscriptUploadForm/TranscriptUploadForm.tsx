@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { FiUpload } from "react-icons/fi";
 import { Button, TextArea } from "../../../atoms";
-import { processTranscript } from "../../../../services/ai";
+import { processTranscript, uploadTranscriptFile } from "../../../../services/ai";
 import type { ProcessTranscriptResult } from "../../../../types";
 
 export interface TranscriptUploadFormProps {
@@ -10,37 +10,57 @@ export interface TranscriptUploadFormProps {
   onProcessed: (result: ProcessTranscriptResult) => void;
 }
 
+function canPreviewAsText(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  return (
+    file.type.startsWith("text/") ||
+    ["txt", "csv", "json", "md", "srt", "vtt", "log"].includes(extension ?? "")
+  );
+}
+
 export default function TranscriptUploadForm({
   meetingId,
   submitLabel = "Process with AI",
   onProcessed,
 }: TranscriptUploadFormProps) {
   const [transcript, setTranscript] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (file: File | undefined) => {
     if (!file) return;
-    const text = await file.text();
-    setTranscript(text);
+    setSelectedFile(file);
+    if (!canPreviewAsText(file)) {
+      setTranscript("");
+      return;
+    }
+
+    try {
+      setTranscript(await file.text());
+    } catch {
+      setError("Couldn't preview this file, but it can still be uploaded.");
+    }
   };
 
   const handleSubmit = async () => {
     setError("");
-    if (!transcript.trim()) {
+    if (!selectedFile && !transcript.trim()) {
       setError("Transcript can't be empty.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await processTranscript({
-        meetingId,
-        transcript,
-        fileFormat: "text",
-        language: "ro",
-      });
+      const result = selectedFile
+        ? await uploadTranscriptFile(meetingId, selectedFile)
+        : await processTranscript({
+            meetingId,
+            transcript,
+            fileFormat: "text",
+            language: "ro",
+          });
       onProcessed(result);
     } catch {
       setError("AI processing failed. Any previous results have been kept.");
@@ -54,7 +74,11 @@ export default function TranscriptUploadForm({
       <TextArea
         value={transcript}
         onChange={(e) => setTranscript(e.target.value)}
-        placeholder="Paste the meeting transcript here..."
+        placeholder={
+          selectedFile && !transcript
+            ? "File selected. Text will be extracted on the server when you process it."
+            : "Paste the meeting transcript here..."
+        }
         rows={8}
         className="font-mono text-sm"
         style={{ resize: "none" }}
@@ -63,7 +87,6 @@ export default function TranscriptUploadForm({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".txt,text/plain"
         className="hidden"
         onChange={(e) => void handleFileChange(e.target.files?.[0])}
       />
@@ -74,8 +97,15 @@ export default function TranscriptUploadForm({
         leftIcon={<FiUpload aria-hidden="true" />}
         onClick={() => fileInputRef.current?.click()}
       >
-        Upload .txt file
+        Upload transcript file
       </Button>
+
+      {selectedFile && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Selected file: {selectedFile.name}
+          {!transcript && " - preview unavailable for this file type"}
+        </p>
+      )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
@@ -83,7 +113,7 @@ export default function TranscriptUploadForm({
         <Button
           type="button"
           isLoading={isSubmitting}
-          disabled={!transcript.trim()}
+          disabled={!selectedFile && !transcript.trim()}
           onClick={() => void handleSubmit()}
         >
           {submitLabel}

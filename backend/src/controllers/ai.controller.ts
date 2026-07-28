@@ -16,6 +16,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import * as mammoth from 'mammoth';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
 import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItemStatus } from '../models/action-item.schema';
@@ -138,7 +139,7 @@ export class AiController {
     );
   }
 
-  @ApiOperation({ summary: 'Proceseaza un transcript incarcat ca fisier text' })
+  @ApiOperation({ summary: 'Proceseaza un transcript incarcat ca fisier' })
   @ApiConsumes('multipart/form-data')
   @ApiQuery({ name: 'meetingId', description: 'ID-ul sedintei existente' })
   @ApiQuery({ name: 'language', required: false, example: 'ro' })
@@ -156,7 +157,7 @@ export class AiController {
   })
   @Post('process-transcript/upload')
   @UseInterceptors(FileInterceptor('file'))
-  processUploadedTranscript(
+  async processUploadedTranscript(
     @Query('meetingId') meetingId: string,
     @Query('language') language = 'ro',
     @Req() req: AuthenticatedRequest,
@@ -167,8 +168,8 @@ export class AiController {
       throw new BadRequestException('Incarca un fisier transcript in campul "file".');
     }
 
-    const transcript = file.buffer.toString('utf8');
-    const fileFormat = file.originalname?.split('.').pop() || 'text';
+    const fileFormat = file.originalname?.split('.').pop() || file.mimetype || 'file';
+    const transcript = await this.extractTranscriptText(file.buffer, fileFormat, file.mimetype);
 
     return this.aiService.processTranscript(
       {
@@ -179,5 +180,19 @@ export class AiController {
       },
       req.user,
     );
+  }
+
+  private async extractTranscriptText(buffer: Buffer, fileFormat: string, mimetype?: string) {
+    const normalizedFormat = fileFormat.toLowerCase();
+
+    if (
+      normalizedFormat === 'docx' ||
+      mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ) {
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value;
+    }
+
+    return buffer.toString('utf8');
   }
 }

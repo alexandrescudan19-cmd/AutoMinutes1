@@ -18,3 +18,15 @@ export function processTranscript(input: ProcessTranscriptInput) {
     .post<ProcessTranscriptResult>("/ai/process-transcript", input)
     .then((res) => res.data);
 }
+
+export function uploadTranscriptFile(meetingId: string, file: File, language = "ro") {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return api
+    .post<ProcessTranscriptResult>("/ai/process-transcript/upload", formData, {
+      params: { meetingId, language },
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then((res) => res.data);
+}

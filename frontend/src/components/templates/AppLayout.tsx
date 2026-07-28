@@ -7,7 +7,7 @@ import { Modal, ThemeToggle } from "../molecules";
 import { MeetingForm, type MeetingFormValues } from "../organisms/meeting";
 import { useMeetingsStore } from "../../stores/meetingsStore";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
-import { processTranscript } from "../../services/ai";
+import { processTranscript, uploadTranscriptFile } from "../../services/ai";
 import { API_BASE_URL } from "../../services/api";
 import type { Meeting } from "../../types";
 
@@ -208,11 +208,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
     if (!created) return;
     setIsNewMeetingOpen(false);
 
-    if (values.transcript) {
+    if (values.transcriptFile) {
+      void uploadTranscriptFile(created.id, values.transcriptFile);
+    } else if (values.transcript) {
       void processTranscript({
         meetingId: created.id,
         transcript: values.transcript,
-        fileFormat: "text",
+        fileFormat: values.transcriptFileFormat ?? "text",
         language: "ro",
       });
     }
