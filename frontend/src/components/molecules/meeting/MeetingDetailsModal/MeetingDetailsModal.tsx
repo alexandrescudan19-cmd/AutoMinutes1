@@ -9,15 +9,19 @@ import MeetingAttendeesPanel from "../../../organisms/attendee/MeetingAttendeesP
 import AiResultsPanel from "../../../organisms/ai/AiResultsPanel/AiResultsPanel.tsx";
 import { getMeeting } from "../../../../services/meetings";
 import { useMeetingsStore } from "../../../../stores/meetingsStore";
-import { formatDateRange, toDateTimeLocalValue } from "../../../../utils/date.ts";
+import {
+  formatDateRange,
+  toDateTimeLocalValue,
+} from "../../../../utils/date.ts";
 import type { Meeting } from "../../../../types";
+
+type Tab = "overview" | "attendees" | "ai";
 
 export interface MeetingDetailsModalProps {
   meetingId: string | null;
   onClose: () => void;
+  initialTab?: Tab;
 }
-
-type Tab = "overview" | "attendees" | "ai";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
@@ -25,14 +29,18 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "ai", label: "Transcript & AI" },
 ];
 
-export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetailsModalProps) {
+export default function MeetingDetailsModal({
+  meetingId,
+  onClose,
+  initialTab = "overview",
+}: MeetingDetailsModalProps) {
   const updateMeeting = useMeetingsStore((state) => state.updateMeeting);
   const deleteMeeting = useMeetingsStore((state) => state.deleteMeeting);
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -52,7 +60,7 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
 
   useEffect(() => {
     if (meetingId) {
-      setActiveTab("overview");
+      setActiveTab(initialTab);
       setIsEditing(false);
       void refetchMeeting(meetingId);
     } else {
@@ -94,12 +102,18 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
   };
 
   return (
-    <Modal isOpen={!!meetingId} onClose={onClose} title={meeting?.title ?? ""} size="xl">
-      {/* Only shown for the very first fetch (no meeting data yet) - background
-          refreshes (e.g. the AI tab's processing poll) reuse the same isLoading
-          flag but shouldn't visibly flash this in and out of the modal every time. */}
-      {isLoading && !meeting && <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+    <Modal
+      isOpen={!!meetingId}
+      onClose={onClose}
+      title={meeting?.title ?? ""}
+      size="xl"
+    >
+      {isLoading && !meeting && (
+        <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+      )}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
 
       {meeting && (
         <div className="flex flex-col gap-4">
@@ -144,11 +158,16 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
                   </div>
 
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {formatDateRange(meeting.startDateTime, meeting.endDateTime)}
+                    {formatDateRange(
+                      meeting.startDateTime,
+                      meeting.endDateTime,
+                    )}
                   </p>
 
                   {meeting.description && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{meeting.description}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {meeting.description}
+                    </p>
                   )}
 
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -189,11 +208,17 @@ export default function MeetingDetailsModal({ meetingId, onClose }: MeetingDetai
               ))}
 
             {activeTab === "attendees" && (
-              <MeetingAttendeesPanel meeting={meeting} onChanged={() => void refetchMeeting(meeting.id)} />
+              <MeetingAttendeesPanel
+                meeting={meeting}
+                onChanged={() => void refetchMeeting(meeting.id)}
+              />
             )}
 
             {activeTab === "ai" && (
-              <AiResultsPanel meeting={meeting} onMeetingChanged={() => void refetchMeeting(meeting.id)} />
+              <AiResultsPanel
+                meeting={meeting}
+                onMeetingChanged={() => void refetchMeeting(meeting.id)}
+              />
             )}
           </div>
         </div>

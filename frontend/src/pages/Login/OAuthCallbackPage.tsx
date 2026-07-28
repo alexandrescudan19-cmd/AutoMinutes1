@@ -21,8 +21,6 @@ export default function OAuthCallbackPage() {
 
     localStorage.setItem("accessToken", token);
 
-    // Fetch the real profile instead of decoding the JWT client-side, so the
-    // stored user (and its theme preference) matches what a password login gets.
     getMe()
       .then((user) => {
         localStorage.setItem("user", JSON.stringify(user));

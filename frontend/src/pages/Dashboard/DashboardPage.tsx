@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiAlertTriangle, FiArrowRight, FiCalendar } from "react-icons/fi";
 import { Card } from "../../components/atoms";
-import { MeetingDetailsModal, StatCard, StatusBadge } from "../../components/molecules";
+import { MeetingDetailsModal, Pagination, StatCard, StatusBadge } from "../../components/molecules";
 import { AppLayout } from "../../components/templates";
 import { listMeetings } from "../../services/meetings";
 import { listActionItems } from "../../services/actionItems";
 import { formatDate, formatDateTime } from "../../utils/date.ts";
 import type { ActionItemListItem, Meeting } from "../../types";
+
+const FAILED_PAGE_SIZE = 4;
 
 function isOverdue(item: ActionItemListItem) {
   if (item.status === "Completed" || !item.dueDate) return false;
@@ -20,6 +22,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<"overview" | "ai">("overview");
+  const [failedPage, setFailedPage] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -69,6 +73,19 @@ export default function DashboardPage() {
     [actionItems],
   );
 
+  const failedMeetings = useMemo(() => meetings.filter((m) => m.aiStatus === "Failed"), [meetings]);
+  const failedPageCount = Math.max(1, Math.ceil(failedMeetings.length / FAILED_PAGE_SIZE));
+  const effectiveFailedPage = Math.min(failedPage, failedPageCount);
+  const pagedFailedMeetings = failedMeetings.slice(
+    (effectiveFailedPage - 1) * FAILED_PAGE_SIZE,
+    effectiveFailedPage * FAILED_PAGE_SIZE,
+  );
+
+  const openMeeting = (id: string, tab: "overview" | "ai" = "overview") => {
+    setSelectedTab(tab);
+    setSelectedMeetingId(id);
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -86,6 +103,42 @@ export default function DashboardPage() {
               <StatCard label="Open action items" value={stats.openActionItems} accent="amber" />
             </div>
 
+            {failedMeetings.length > 0 && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
+                <div className="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-400">
+                  <FiAlertTriangle aria-hidden="true" />
+                  AI processing failed for {failedMeetings.length} meeting
+                  {failedMeetings.length > 1 ? "s" : ""}
+                </div>
+                <div className="mt-2 flex flex-col gap-2">
+                  {pagedFailedMeetings.map((meeting) => (
+                    <button
+                      key={meeting.id}
+                      type="button"
+                      onClick={() => openMeeting(meeting.id, "ai")}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-left text-sm hover:bg-red-50 dark:border-red-900 dark:bg-gray-900 dark:hover:bg-red-950/40"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-gray-900 dark:text-gray-100">
+                        {meeting.title}
+                      </span>
+                      <span className="shrink-0 text-xs font-medium text-red-600 dark:text-red-400">
+                        Retry
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {failedPageCount > 1 && (
+                  <div className="mt-3 flex justify-center">
+                    <Pagination
+                      page={effectiveFailedPage}
+                      pageCount={failedPageCount}
+                      onPageChange={setFailedPage}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid gap-6 lg:grid-cols-2">
               <Card title="Upcoming meetings">
                 {upcomingMeetings.length === 0 ? (
@@ -96,7 +149,7 @@ export default function DashboardPage() {
                       <button
                         key={meeting.id}
                         type="button"
-                        onClick={() => setSelectedMeetingId(meeting.id)}
+                        onClick={() => openMeeting(meeting.id)}
                         className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-left hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                       >
                         <FiCalendar className="shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
@@ -126,7 +179,7 @@ export default function DashboardPage() {
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => setSelectedMeetingId(item.meetingId)}
+                          onClick={() => openMeeting(item.meetingId)}
                           className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 ${
                             overdue ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/40" : "border-gray-200 dark:border-gray-700"
                           }`}
@@ -157,7 +210,11 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <MeetingDetailsModal meetingId={selectedMeetingId} onClose={() => setSelectedMeetingId(null)} />
+      <MeetingDetailsModal
+        meetingId={selectedMeetingId}
+        initialTab={selectedTab}
+        onClose={() => setSelectedMeetingId(null)}
+      />
     </AppLayout>
   );
 }

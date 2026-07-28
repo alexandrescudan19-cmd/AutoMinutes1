@@ -44,13 +44,6 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
     }
   }, [meeting.aiResultId, loadResult]);
 
-  // A transcript can already be processing in the background (e.g. it was
-  // attached when the meeting was created) - poll until it's done, so this tab
-  // picks up the result without needing a manual refresh, and so the "Process
-  // with AI" form stays hidden the whole time instead of allowing a second submit.
-  // onMeetingChanged is a new inline function on every parent render, so it's read
-  // through a ref instead of a dependency - otherwise the interval would keep
-  // getting torn down and recreated before it ever gets a chance to fire.
   const isProcessing = meeting.aiStatus === "Processing";
   const onMeetingChangedRef = useRef(onMeetingChanged);
   onMeetingChangedRef.current = onMeetingChanged;

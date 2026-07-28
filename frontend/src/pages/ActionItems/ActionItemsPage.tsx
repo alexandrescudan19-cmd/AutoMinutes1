@@ -1,27 +1,41 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FiRefreshCw } from "react-icons/fi";
 import { Button, Card } from "../../components/atoms";
-import { FilterPill } from "../../components/molecules";
+import { FilterPill, Pagination } from "../../components/molecules";
 import { ActionItemList } from "../../components/organisms/action-item";
 import { AppLayout } from "../../components/templates";
 import { listActionItems } from "../../services/actionItems";
 import type { ActionItemListItem, ActionItemStatus } from "../../types";
 
-type StatusFilter = "all" | ActionItemStatus;
+type CardKey = "all" | ActionItemStatus;
 
-const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: "In Progress", label: "In progress" },
-  { value: "Pending", label: "Open" },
-  { value: "Completed", label: "Done" },
+const CARD_GROUPS: { key: CardKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "In Progress", label: "In Progress" },
+  { key: "Pending", label: "Open" },
+  { key: "Completed", label: "Done" },
 ];
 
+const PAGE_SIZE = 10;
+
+function readCardFromParams(searchParams: URLSearchParams): CardKey {
+  const card = searchParams.get("card");
+  if (card === "In Progress" || card === "Pending" || card === "Completed") return card;
+  return "all";
+}
+
 export default function ActionItemsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [actionItems, setActionItems] = useState<ActionItemListItem[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [assigneeFilter, setAssigneeFilter] = useState(() => searchParams.get("assignee") ?? "all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeCard, setActiveCard] = useState<CardKey>(() => readCardFromParams(searchParams));
+  const [page, setPage] = useState(() => {
+    const fromUrl = Number(searchParams.get("page"));
+    return fromUrl > 0 ? fromUrl : 1;
+  });
 
   const assignees = useMemo(
     () =>
@@ -33,16 +47,32 @@ export default function ActionItemsPage() {
 
   const visibleActionItems = useMemo(
     () =>
-      actionItems.filter((item) => {
-        const statusMatches = statusFilter === "all" || item.status === statusFilter;
-        const assigneeMatches =
-          assigneeFilter === "all" || item.responsiblePerson === assigneeFilter;
-        return statusMatches && assigneeMatches;
-      }),
-    [actionItems, assigneeFilter, statusFilter],
+      actionItems.filter(
+        (item) => assigneeFilter === "all" || item.responsiblePerson === assigneeFilter,
+      ),
+    [actionItems, assigneeFilter],
   );
 
-  const hasActiveFilters = statusFilter !== "all" || assigneeFilter !== "all";
+  const cards = useMemo(
+    () =>
+      CARD_GROUPS.map((group) => ({
+        ...group,
+        items:
+          group.key === "all"
+            ? visibleActionItems
+            : visibleActionItems.filter((item) => item.status === group.key),
+      })),
+    [visibleActionItems],
+  );
+
+  const activeGroup = cards.find((group) => group.key === activeCard) ?? null;
+  const pageCount = activeGroup ? Math.max(1, Math.ceil(activeGroup.items.length / PAGE_SIZE)) : 1;
+  const effectivePage = Math.min(page, pageCount);
+  const pagedItems = activeGroup
+    ? activeGroup.items.slice((effectivePage - 1) * PAGE_SIZE, effectivePage * PAGE_SIZE)
+    : [];
+
+  const hasActiveFilters = assigneeFilter !== "all";
 
   const loadActionItems = async () => {
     setIsLoading(true);
@@ -61,6 +91,19 @@ export default function ActionItemsPage() {
     void loadActionItems();
   }, []);
 
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (activeCard !== "all") next.set("card", activeCard);
+    if (assigneeFilter !== "all") next.set("assignee", assigneeFilter);
+    if (effectivePage > 1) next.set("page", String(effectivePage));
+    setSearchParams(next, { replace: true });
+  }, [activeCard, assigneeFilter, effectivePage, setSearchParams]);
+
+  const selectCard = (key: CardKey) => {
+    setActiveCard(key);
+    setPage(1);
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-5">
@@ -71,63 +114,84 @@ export default function ActionItemsPage() {
               {visibleActionItems.length} items across all meetings
             </p>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            leftIcon={<FiRefreshCw />}
-            isLoading={isLoading}
-            onClick={() => void loadActionItems()}
-          >
-            Refresh
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterPill
-            label="Status"
-            value={statusFilter}
-            defaultValue="all"
-            options={STATUS_OPTIONS}
-            onChange={(value) => setStatusFilter(value as StatusFilter)}
-          />
-          <FilterPill
-            label="Assignee"
-            value={assigneeFilter}
-            defaultValue="all"
-            options={[
-              { value: "all", label: "All assignees" },
-              ...assignees.map((assignee) => ({ value: assignee, label: assignee })),
-            ]}
-            width="w-56"
-            onChange={setAssigneeFilter}
-          />
-          {hasActiveFilters && (
-            <button
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterPill
+              label="Assignee"
+              value={assigneeFilter}
+              defaultValue="all"
+              options={[
+                { value: "all", label: "All assignees" },
+                ...assignees.map((assignee) => ({ value: assignee, label: assignee })),
+              ]}
+              width="w-56"
+              onChange={setAssigneeFilter}
+            />
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => setAssigneeFilter("all")}
+                className="text-sm font-medium text-gray-400 transition-colors hover:text-brand dark:text-gray-500"
+              >
+                Reset
+              </button>
+            )}
+            <Button
               type="button"
-              onClick={() => {
-                setStatusFilter("all");
-                setAssigneeFilter("all");
-              }}
-              className="text-sm font-medium text-gray-400 transition-colors hover:text-brand dark:text-gray-500"
+              variant="secondary"
+              leftIcon={<FiRefreshCw />}
+              isLoading={isLoading}
+              onClick={() => void loadActionItems()}
             >
-              Reset
-            </button>
-          )}
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <Card>
-          {isLoading ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {cards.map((group) => {
+            const isActive = activeCard === group.key;
+            return (
+              <button
+                key={group.key}
+                type="button"
+                onClick={() => selectCard(group.key)}
+                className={`rounded-xl border p-5 text-left transition-colors ${
+                  isActive
+                    ? "border-brand bg-brand/5 dark:bg-brand/10"
+                    : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+                }`}
+              >
+                <p className={`text-2xl font-semibold ${isActive ? "text-brand" : "text-gray-900 dark:text-gray-100"}`}>
+                  {group.items.length}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{group.label}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {isLoading ? (
+          <Card>
             <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
-          ) : (
-            <ActionItemList
-              items={visibleActionItems}
-              showMeetingTitle
-              onChanged={() => void loadActionItems()}
-            />
-          )}
-        </Card>
+          </Card>
+        ) : (
+          activeGroup && (
+            <Card>
+              <ActionItemList
+                items={pagedItems}
+                showMeetingTitle
+                onChanged={() => void loadActionItems()}
+              />
+              {pageCount > 1 && (
+                <div className="mt-4 flex justify-center">
+                  <Pagination page={effectivePage} pageCount={pageCount} onPageChange={setPage} />
+                </div>
+              )}
+            </Card>
+          )
+        )}
       </div>
     </AppLayout>
   );

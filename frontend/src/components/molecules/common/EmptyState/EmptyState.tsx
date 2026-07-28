@@ -2,10 +2,10 @@ import { type ReactNode } from 'react';
 import { cn } from '../../../atoms/cn.ts';
 
 export interface EmptyStateProps {
-  icon?: ReactNode;         // optional icon on top (e.g. a magnifying glass, an empty folder)
-  title: string;            // main message (required)
+  icon?: ReactNode;
+  title: string;
   description?: string;
-  action?: ReactNode;       // optional button (e.g. "Create your first meeting")
+  action?: ReactNode;
   className?: string;
 }
 

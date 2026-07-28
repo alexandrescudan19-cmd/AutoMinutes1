@@ -4,13 +4,13 @@ import { FiX } from 'react-icons/fi';
 import { cn } from '../../../atoms/cn.ts';
 
 export interface ModalProps {
-  isOpen: boolean;            // controlled by the parent: open or not
+  isOpen: boolean;
   onClose: () => void;
   title?: ReactNode;
-  children: ReactNode;        // the modal's content
-  footer?: ReactNode;         // bottom area (e.g. buttons)
+  children: ReactNode;
+  footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  closeOnBackdrop?: boolean;  // whether clicking the dark backdrop closes it (default true)
+  closeOnBackdrop?: boolean;
 }
 
 const sizes: Record<NonNullable<ModalProps['size']>, string> = {
@@ -21,7 +21,6 @@ const sizes: Record<NonNullable<ModalProps['size']>, string> = {
 };
 
 export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', closeOnBackdrop = true }: ModalProps) {
-  // While the modal is open: listen for the Escape key and block scrolling on the page behind it.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -31,7 +30,6 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
 
-    // cleanup: when the modal closes, stop listening and restore scrolling
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
@@ -40,7 +38,6 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   if (!isOpen) return null;
 
-  // createPortal: render the modal directly into <body>, above the rest of the page
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"

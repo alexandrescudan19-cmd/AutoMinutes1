@@ -9,8 +9,6 @@ export interface AuthUser {
   [key: string]: unknown;
 }
 
-// cache: re-parse only when the raw localStorage string actually changes,
-// otherwise return the same object reference (required by useSyncExternalStore)
 let cachedRaw: string | null = null;
 let cachedUser: AuthUser | null = null;
 

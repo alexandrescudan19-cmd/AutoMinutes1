@@ -18,8 +18,6 @@ export interface Attendee {
 export interface AttendeeSelectorProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
-  // Meetings in the future need a real way to be invited (calendar/email), so require
-  // an email there; past meetings are just kept for the record, so email is optional.
   requireEmail?: boolean;
 }
 
@@ -74,9 +72,6 @@ export default function AttendeeSelector({
     [attendees, selectedIds, query],
   );
 
-  // Checks a candidate attendee (about to be added or selected from saved) against
-  // whoever's already on this meeting - no two attendees can share an email, and
-  // only one "Organizer" is allowed per meeting.
   const findSelectionConflict = (candidate: { email?: string; roleInMeeting: string }): string => {
     const email = candidate.email?.trim().toLowerCase();
     if (email && currentUser?.email?.toLowerCase() === email) {

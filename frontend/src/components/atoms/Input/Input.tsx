@@ -3,20 +3,16 @@ import { cn } from '../cn.ts';
 import { FieldWrapper } from '../FieldWrapper.tsx';
 import { getFieldDescribedBy } from '../fieldDescribedBy.ts';
 
-// Inherits all the normal <input> attributes (type, placeholder, value, onChange...)
-// and adds our own: label, error, hint
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;   // label above the field
-  error?: string;   // error message (red) below the field
-  hint?: string;    // helper text (gray) below the field, when there's no error
+  label?: string;
+  error?: string;
+  hint?: string;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, hint, id, className, required, ...props },
   ref,
 ) {
-  // useId generates a unique id, so the label is correctly linked to the input
-  // (important for accessibility: clicking the label = focus on the input)
   const autoId = useId();
   const inputId = id ?? autoId;
   const describedBy = getFieldDescribedBy(inputId, error, hint);

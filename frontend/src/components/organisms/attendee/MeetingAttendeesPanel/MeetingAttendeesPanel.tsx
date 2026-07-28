@@ -14,8 +14,6 @@ export interface MeetingAttendeesPanelProps {
 }
 
 export default function MeetingAttendeesPanel({ meeting, onChanged }: MeetingAttendeesPanelProps) {
-  // Meetings in the future need a real way to be invited (calendar/email), so require
-  // an email there; past meetings are just kept for the record, so email is optional.
   const isFutureMeeting = new Date(meeting.startDateTime).getTime() > Date.now();
 
   const [attendees, setAttendees] = useState<Attendee[]>([]);
@@ -60,7 +58,6 @@ export default function MeetingAttendeesPanel({ meeting, onChanged }: MeetingAtt
     };
   }, [meeting.attendeeIds]);
 
-  // The meeting's organizer is always pinned first, regardless of array order.
   const sortedAttendees = useMemo(
     () =>
       [...attendees].sort((a, b) => {
@@ -71,10 +68,6 @@ export default function MeetingAttendeesPanel({ meeting, onChanged }: MeetingAtt
     [attendees],
   );
 
-  // Checks a candidate attendee (about to be added or edited) against whoever
-  // else is already on this meeting - no two attendees can share an email, and
-  // only one "Organizer" is allowed per meeting. `excludeId` skips the attendee
-  // being edited, so they don't conflict with their own current values.
   const findConflict = (
     candidate: { email?: string; roleInMeeting: string },
     excludeId?: string,
