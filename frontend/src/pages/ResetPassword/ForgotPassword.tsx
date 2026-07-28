@@ -34,11 +34,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <Card title="Forgot password" className="w-full max-w-md">
         {submitted ? (
           <div className="flex flex-col items-center gap-4 text-center">
-            <p className="text-green-700">{message}</p>
+            <p className="text-green-700 dark:text-green-400">{message}</p>
             <Link to="/login" className="text-brand hover:underline">
               Back to sign in
             </Link>
@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
               void handleSubmit();
             }}
           >
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Enter the email address associated with your account and we'll
               send you a link to reset your password.
             </p>
@@ -62,11 +62,11 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <Button type="submit" isLoading={isLoading} fullWidth>
               Send reset link
             </Button>
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
               Remembered your password?{" "}
               <Link to="/login" className="text-brand link-underline">
                 Sign in

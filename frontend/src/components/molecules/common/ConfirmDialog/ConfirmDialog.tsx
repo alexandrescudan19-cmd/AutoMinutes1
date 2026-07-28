@@ -1,26 +1,26 @@
-import { type ReactNode } from 'react';
-import Modal from '../Modal/Modal.tsx';
-import Button from '../../../atoms/Button/Button.tsx';
+import { type ReactNode } from "react";
+import Modal from "../Modal/Modal.tsx";
+import Button from "../../../atoms/Button/Button.tsx";
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
   title?: string;
-  message: ReactNode;                    // the question (e.g. "Delete this meeting?")
-  confirmLabel?: string;                
-  cancelLabel?: string;                 
-  variant?: 'primary' | 'danger';        // confirm button color
-  isLoading?: boolean;                  
-  onConfirm: () => void;               
-  onCancel: () => void;                 
+  message: ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: "primary" | "danger";
+  isLoading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 export default function ConfirmDialog({
   isOpen,
-  title = 'Are you sure?',
+  title = "Are you sure?",
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-  variant = 'danger',
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  variant = "danger",
   isLoading = false,
   onConfirm,
   onCancel,

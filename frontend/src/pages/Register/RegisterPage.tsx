@@ -48,10 +48,13 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout>
-      <Card title="Create account" className="w-full max-w-md">
+      <Card
+        title="Create account"
+        className="w-full max-w-md drop-shadow-[0_25px_50px_rgba(124,58,237,0.35)] dark:drop-shadow-[0_25px_50px_rgba(0,149,246,0.35)]"
+      >
         {success ? (
           <div className="flex flex-col items-center gap-3 text-center">
-            <p className="text-green-700">
+            <p className="text-green-700 dark:text-green-400">
               Account created! Check your email to verify your account before
               signing in.
             </p>
@@ -98,11 +101,11 @@ export default function RegisterPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <Button type="submit" isLoading={isLoading} fullWidth>
               Create account
             </Button>
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
               Already have account?{" "}
               <Link to="/login" className="text-brand link-underline">
                 Sign in

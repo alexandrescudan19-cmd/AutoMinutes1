@@ -51,11 +51,11 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <Card title="Reset password" className="w-full max-w-md">
         {success ? (
           <div className="flex flex-col items-center gap-4 text-center">
-            <p className="text-green-700">{message}</p>
+            <p className="text-green-700 dark:text-green-400">{message}</p>
             <Link to="/login" className="text-brand link-underline">
               Go to sign in
             </Link>
@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <Button type="submit" isLoading={isLoading} fullWidth>
               Reset password
             </Button>

@@ -29,14 +29,16 @@ export default function VerifyEmailPage() {
   }, [searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <Card title="Email verification" className="w-full max-w-md">
         <div className="flex flex-col items-center gap-4 text-center">
           {status === "loading" && <Loader label="Verifying your account..." />}
           {status !== "loading" && (
             <p
               className={
-                status === "success" ? "text-green-700" : "text-red-600"
+                status === "success"
+                  ? "text-green-700 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
               }
             >
               {message}

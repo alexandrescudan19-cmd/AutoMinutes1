@@ -65,7 +65,10 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       {" "}
-      <Card title="Sign in" className="w-full max-w-md">
+      <Card
+        title="Sign in"
+        className="w-full max-w-md drop-shadow-[0_25px_50px_rgba(124,58,237,0.35)] dark:drop-shadow-[0_25px_50px_rgba(0,149,246,0.35)]"
+      >
         <form
           className="flex flex-col gap-4"
           onSubmit={(e) => {
@@ -94,7 +97,7 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <Button type="submit" isLoading={isLoading} fullWidth>
             Sign in
           </Button>
@@ -104,7 +107,7 @@ export default function LoginPage() {
               variant="ghost"
               size="sm"
               aria-label="Sign in with Google"
-              className="h-11 w-11 rounded-full border border-gray-300 p-0 cursor-pointer"
+              className="h-11 w-11 rounded-full border border-gray-300 p-0 cursor-pointer dark:border-gray-700"
               onClick={() => {
                 window.location.href = `${API_BASE_URL}/auth/google`;
               }}
@@ -112,7 +115,7 @@ export default function LoginPage() {
               <GoogleIcon />
             </Button>
           </div>
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             No account?{" "}
             <Link to="/register" className="text-brand link-underline">
               Register

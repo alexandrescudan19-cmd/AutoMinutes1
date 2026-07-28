@@ -15,10 +15,6 @@ export interface AppLayoutProps {
   children: ReactNode;
 }
 
-// Shared by every label next to a sidebar icon: no gap-* on the parent (a flex
-// gap reserves space between children no matter how small a child shrinks to),
-// so the spacing lives on the label's own margin instead - it can then close to
-// 0 together with its width/scale, in the same transition, with nothing left over.
 const LABEL_TRANSITION =
   "inline-block origin-left overflow-hidden whitespace-nowrap transition-all duration-200";
 
@@ -289,7 +285,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {googleStatusLoading ? (
             <Loader size="sm" />
           ) : (
-            <FcGoogle className="shrink-0" aria-hidden="true" size={16} />
+            <span className="relative shrink-0">
+              <FcGoogle aria-hidden="true" size={16} />
+              <span
+                className={`absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-gray-100 dark:border-gray-800 ${
+                  googleConnected ? "bg-green-500" : "bg-red-500"
+                }`}
+                aria-hidden="true"
+              />
+            </span>
           )}
           <span className={labelClasses(isCollapsed)}>
             {googleConnected ? "Google connected" : "Connect to Google"}

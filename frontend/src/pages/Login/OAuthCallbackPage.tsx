@@ -21,8 +21,6 @@ export default function OAuthCallbackPage() {
 
     localStorage.setItem("accessToken", token);
 
-    // Fetch the real profile instead of decoding the JWT client-side, so the
-    // stored user (and its theme preference) matches what a password login gets.
     getMe()
       .then((user) => {
         localStorage.setItem("user", JSON.stringify(user));
@@ -36,7 +34,7 @@ export default function OAuthCallbackPage() {
   }, [searchParams, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <Card title="Signing you in" className="w-full max-w-md">
         <div className="flex justify-center">
           <Loader label="Completing Google sign in..." />

@@ -7,8 +7,8 @@ import { useGoogleConnectionStatus } from "../../../../hooks/useGoogleConnection
 export interface MeetingFormValues {
   title: string;
   description: string;
-  startDateTime: string; // ISO string
-  endDateTime: string; // ISO string
+  startDateTime: string;
+  endDateTime: string;
   status: string;
   attendeeIds: string[];
   createGoogleCalendarEvent: boolean;
@@ -30,12 +30,8 @@ const STATUS_OPTIONS = [
   { value: "Cancelled", label: "Cancelled" },
 ];
 
-// Character limit for the description (~150-200 words)
 const MAX_DESCRIPTION_LENGTH = 1000;
 
-// Keeps the date picker (and typed-in values) within a sane range - otherwise a
-// stray keystroke while typing a year (e.g. "2" instead of "2026") silently
-// produces a technically-valid but nonsensical date like year 2.
 const MIN_YEAR = 2000;
 const MAX_YEAR = new Date().getFullYear() + 5;
 const MIN_DATE = `${MIN_YEAR}-01-01`;
@@ -77,7 +73,6 @@ export default function MeetingForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [now] = useState(() => Date.now());
 
-  // While no date has been picked yet, assume future (show the Google Meet step).
   const isFutureMeeting = startDateTime
     ? new Date(startDateTime).getTime() > now
     : true;
@@ -150,13 +145,9 @@ export default function MeetingForm({
     activeStep === "details" ? isDetailsValid : activeStep === "schedule" ? isScheduleValid : true;
   const canFinish = isDetailsValid && isScheduleValid;
 
-  // Shown live, without needing to click Next first - so a disabled Next button
-  // always comes with an explanation of what's still missing/wrong.
   const currentStepError =
     activeStep === "details" ? validateDetails() : activeStep === "schedule" ? validateSchedule() : "";
 
-  // "details" is always step 0, "schedule" is always step 1 - blocks jumping ahead
-  // past an incomplete required step, but always allows going back.
   const maxReachableIndex = !isDetailsValid ? 0 : !isScheduleValid ? 1 : steps.length - 1;
 
   const goToStep = (index: number) => {
@@ -387,8 +378,6 @@ export default function MeetingForm({
         )}
       </div>
 
-      {/* Always rendered (even empty) so the modal doesn't resize/jump every time an
-          error appears or disappears - the line height is reserved either way. */}
       <p className="mt-4 min-h-[1.25rem] text-sm text-red-600 dark:text-red-400">
         {currentStepError || error}
       </p>
