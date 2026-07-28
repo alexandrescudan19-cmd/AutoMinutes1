@@ -61,25 +61,6 @@ export class MeetingsController {
     return this.meetingsService.findNotificationsByEmail(email, req.user);
   }
 
-  @ApiOperation({ summary: 'Listeaza versiunile de transcript ale unei sedinte' })
-  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
-  @Get(':id/transcripts')
-  findTranscriptVersions(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.meetingsService.findTranscriptVersionsForMeeting(id, req.user);
-  }
-
-  @ApiOperation({ summary: 'Revine la o versiune anterioara de transcript' })
-  @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
-  @ApiParam({ name: 'transcriptId', description: 'ID-ul transcriptului' })
-  @Post(':id/transcripts/:transcriptId/restore')
-  restoreTranscriptVersion(
-    @Param('id') id: string,
-    @Param('transcriptId') transcriptId: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    return this.meetingsService.restoreTranscriptVersion(id, transcriptId, req.user);
-  }
-
   @ApiOperation({ summary: 'Returneaza o sedinta dupa ID' })
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @Get(':id')

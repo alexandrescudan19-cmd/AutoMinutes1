@@ -52,7 +52,7 @@ export class Meeting {
   transcriptId?: string;
 
   @Prop({ type: Types.ObjectId, ref: 'AIResult' })
-  aiResultId?: string | null;
+  aiResultId?: string;
 
   @Prop({ type: [Types.ObjectId], ref: 'Attendee', default: [] })
   attendeeIds!: string[];

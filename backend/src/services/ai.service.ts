@@ -205,9 +205,6 @@ export class AiService {
     }
 
     const transcript = await this.resolveTranscript(processTranscriptDto);
-    if (transcript.meetingId.toString() !== meetingId) {
-      throw new BadRequestException('Transcriptul nu apartine acestui meeting.');
-    }
     if (!transcript.content.trim()) {
       throw new BadRequestException('Transcriptul nu poate fi gol.');
     }

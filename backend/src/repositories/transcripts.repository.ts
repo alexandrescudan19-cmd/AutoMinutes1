@@ -26,14 +26,6 @@ export class TranscriptsRepository {
     return transcripts.map((transcript) => this.toModel(transcript));
   }
 
-  async findByMeetingId(meetingId: string): Promise<Transcript[]> {
-    const transcripts = await this.transcriptModel
-      .find({ meetingId })
-      .sort({ uploadedAt: -1, createdAt: -1 })
-      .exec();
-    return transcripts.map((transcript) => this.toModel(transcript));
-  }
-
   async findOne(id: string): Promise<Transcript | undefined> {
     const transcript = await this.transcriptModel.findById(id).exec();
     return transcript ? this.toModel(transcript) : undefined;
