@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, Loader } from "../../components/atoms";
 import { applyTheme } from "../../hooks/useTheme";
+import { clearAuthSession, setAuthSession } from "../../services/authSession";
 import { getMe } from "../../services/users";
 
 export default function OAuthCallbackPage() {
@@ -19,18 +20,22 @@ export default function OAuthCallbackPage() {
       return;
     }
 
-    localStorage.setItem("accessToken", token);
-
-    getMe()
-      .then((user) => {
-        localStorage.setItem("user", JSON.stringify(user));
+    const finishGoogleSignIn = async () => {
+      localStorage.setItem("accessToken", token);
+      try {
+        const user = await getMe();
+        setAuthSession(token, user);
         if (user.themePreference === "light" || user.themePreference === "dark") {
           applyTheme(user.themePreference);
         }
-      })
-      .finally(() => {
         navigate("/dashboard", { replace: true });
-      });
+      } catch {
+        clearAuthSession();
+        navigate("/login", { replace: true });
+      }
+    };
+
+    void finishGoogleSignIn();
   }, [searchParams, navigate]);
 
   return (

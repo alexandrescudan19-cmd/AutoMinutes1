@@ -4,6 +4,7 @@ import { Badge, Button, Card } from "../../components/atoms";
 import { AppLayout } from "../../components/templates";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
 import { api, API_BASE_URL } from "../../services/api";
+import { clearAuthSession, getAccessToken, isAccessTokenValid } from "../../services/authSession";
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,7 +28,12 @@ export default function SettingsPage() {
   }, [searchParams, setSearchParams, refetch]);
 
   const handleConnect = () => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
+    if (!isAccessTokenValid(token)) {
+      clearAuthSession();
+      window.location.href = "/login";
+      return;
+    }
     window.location.href = `${API_BASE_URL}/auth/google/connect?token=${token}`;
   };
 

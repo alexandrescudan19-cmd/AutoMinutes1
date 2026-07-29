@@ -5,6 +5,7 @@ import { Button, Card, Input, PasswordInput } from "../../components/atoms";
 import { AuthLayout } from "../../components/templates";
 import { api, API_BASE_URL } from "../../services/api";
 import { applyTheme } from "../../hooks/useTheme";
+import { setAuthSession } from "../../services/authSession";
 
 function getApiErrorMessage(error: unknown) {
   if (isAxiosError<{ message?: string }>(error)) {
@@ -49,8 +50,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, password });
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      setAuthSession(data.accessToken, data.user);
       if (data.user?.themePreference === "light" || data.user?.themePreference === "dark") {
         applyTheme(data.user.themePreference);
       }

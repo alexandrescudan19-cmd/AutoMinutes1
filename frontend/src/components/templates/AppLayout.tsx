@@ -9,6 +9,7 @@ import { useMeetingsStore } from "../../stores/meetingsStore";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
 import { processTranscript, uploadTranscriptFile } from "../../services/ai";
 import { API_BASE_URL } from "../../services/api";
+import { clearAuthSession, getAccessToken, isAccessTokenValid } from "../../services/authSession";
 import type { Meeting } from "../../types";
 
 export interface AppLayoutProps {
@@ -105,8 +106,7 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
+    clearAuthSession();
     navigate("/login");
   };
 
@@ -191,7 +191,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
       navigate("/settings");
       return;
     }
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
+    if (!isAccessTokenValid(token)) {
+      clearAuthSession();
+      navigate("/login");
+      return;
+    }
     window.location.href = `${API_BASE_URL}/auth/google/connect?token=${token}`;
   };
 

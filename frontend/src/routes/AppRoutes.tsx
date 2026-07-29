@@ -9,10 +9,11 @@ import OAuthCallbackPage from "../pages/Login/OAuthCallbackPage";
 import SettingsPage from "../pages/Settings/SettingsPage";
 import ForgotPasswordPage from "../pages/ResetPassword/ForgotPassword";
 import ResetPasswordPage from "../pages/ResetPassword/ResetPassword";
+import { useAuth } from "../hooks/useAuth";
 
 function ProtectedRoute() {
-  const token = localStorage.getItem("accessToken");
-  return token ? <Outlet /> : <Navigate to="/login" replace />;
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 export default function AppRoutes() {
