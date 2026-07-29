@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { FiAlertTriangle, FiCheckSquare, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiAlertTriangle, FiCheckSquare, FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { Button, Input, Select } from "../../../atoms";
 import { ConfirmDialog, EditActions, EmptyState, StatusBadge } from "../../../molecules/common";
-import { deleteActionItem, updateActionItem } from "../../../../services/actionItems";
+import { createActionItem, deleteActionItem, updateActionItem } from "../../../../services/actionItems";
 import { formatDate, toDateInputValue } from "../../../../utils/date.ts";
 import type { ActionItem, ActionItemListItem, ActionItemStatus } from "../../../../types";
 
@@ -12,6 +12,8 @@ export interface ActionItemListProps {
   showMeetingTitle?: boolean;
   onChanged: () => void;
   onOpenMeeting?: (meetingId: string) => void;
+  meetingId?: string;
+  allowCreate?: boolean;
 }
 
 const STATUS_GROUPS: { key: ActionItemStatus | "Unknown"; label: string }[] = [
@@ -50,6 +52,8 @@ export default function ActionItemList({
   showMeetingTitle = false,
   onChanged,
   onOpenMeeting,
+  meetingId,
+  allowCreate = false,
 }: ActionItemListProps) {
   const [editingId, setEditingId] = useState("");
   const [editTask, setEditTask] = useState("");
@@ -60,6 +64,11 @@ export default function ActionItemList({
   const [pendingDeleteId, setPendingDeleteId] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [busyToggleId, setBusyToggleId] = useState("");
+  const [newTask, setNewTask] = useState("");
+  const [newResponsiblePerson, setNewResponsiblePerson] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [newStatus, setNewStatus] = useState<ActionItemStatus>("Pending");
+  const [isCreating, setIsCreating] = useState(false);
 
   const groupedItems = useMemo(
     () =>
@@ -133,17 +142,87 @@ export default function ActionItemList({
     }
   };
 
+  const saveNewActionItem = async () => {
+    if (!meetingId || !newTask.trim() || !newResponsiblePerson.trim()) return;
+    setIsCreating(true);
+    try {
+      await createActionItem({
+        meetingId,
+        task: newTask.trim(),
+        responsiblePerson: newResponsiblePerson.trim(),
+        dueDate: newDueDate ? new Date(newDueDate).toISOString() : undefined,
+        status: newStatus,
+      });
+      toast.success("Action item added.");
+      setNewTask("");
+      setNewResponsiblePerson("");
+      setNewDueDate("");
+      setNewStatus("Pending");
+      onChanged();
+    } catch {
+      toast.error("Couldn't add the action item.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createForm =
+    allowCreate && meetingId ? (
+      <div className="grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+        <Input
+          label="Task"
+          value={newTask}
+          onChange={(event) => setNewTask(event.target.value)}
+        />
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Input
+            label="Assignee"
+            value={newResponsiblePerson}
+            onChange={(event) => setNewResponsiblePerson(event.target.value)}
+          />
+          <Input
+            label="Due date"
+            type="date"
+            value={newDueDate}
+            onChange={(event) => setNewDueDate(event.target.value)}
+          />
+          <Select
+            label="Status"
+            options={STATUS_OPTIONS}
+            value={newStatus}
+            onChange={(event) => setNewStatus(event.target.value as ActionItemStatus)}
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            leftIcon={<FiPlus aria-hidden="true" />}
+            isLoading={isCreating}
+            disabled={!newTask.trim() || !newResponsiblePerson.trim()}
+            onClick={() => void saveNewActionItem()}
+          >
+            Add action item
+          </Button>
+        </div>
+      </div>
+    ) : null;
+
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={<FiCheckSquare />}
-        title="No action items match the current filters."
-      />
+      <div className="flex flex-col gap-4">
+        {createForm}
+        <EmptyState
+          icon={<FiCheckSquare />}
+          title="No action items match the current filters."
+        />
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-5">
+      {createForm}
       {groupedItems.map((group) => (
         <section key={group.key} className="grid gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">

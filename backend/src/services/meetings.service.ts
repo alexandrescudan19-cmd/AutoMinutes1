@@ -17,6 +17,7 @@ import { Invitation } from '../models/invitation.schema';
 import { AiStatus, Meeting, MeetingStatus } from '../models/meeting.schema';
 import { Notification } from '../models/notification.schema';
 import { AttendeesRepository } from '../repositories/attendees.repository';
+import { ActionItemsRepository } from '../repositories/action-items.repository';
 import { AiResultsRepository } from '../repositories/ai-results.repository';
 import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
@@ -73,6 +74,7 @@ export class MeetingsService {
     private readonly transcriptsRepository: TranscriptsRepository,
     private readonly googleMeetTranscriptService: GoogleMeetTranscriptService,
     private readonly aiResultsRepository: AiResultsRepository,
+    private readonly actionItemsRepository: ActionItemsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly encryptionService: EncryptionService,
   ) {}
@@ -716,15 +718,13 @@ export class MeetingsService {
     // Adauga numarul de actiuni. acum.
     return Promise.all(
       meetings.map(async (meeting) => {
-        if (!meeting.aiResultId) {
-          return { ...meeting, actionItemsCount: 0 };
-        }
-
-        const aiResult = await this.aiResultsRepository.findOne(meeting.aiResultId);
+        const actionItems = await this.actionItemsRepository.findByMeetingId(
+          meeting.id,
+          meeting.aiResultId,
+        );
         return {
           ...meeting,
-          actionItemsCount:
-            aiResult?.meetingStatistics?.actionItemCount ?? aiResult?.actionItemIds?.length ?? 0,
+          actionItemsCount: actionItems.length,
         };
       }),
     );

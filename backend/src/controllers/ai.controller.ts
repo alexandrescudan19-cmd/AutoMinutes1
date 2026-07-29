@@ -16,6 +16,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CreateActionItemDto } from '../dto/ai/create-action-item.dto';
 import * as mammoth from 'mammoth';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
 import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
@@ -25,6 +26,10 @@ import { AuthenticatedUser } from '../services/meetings.service';
 
 interface AuthenticatedRequest {
   user: AuthenticatedUser;
+}
+
+class CreateManualActionItemDto extends CreateActionItemDto {
+  meetingId!: string;
 }
 
 @ApiTags('ai')
@@ -46,6 +51,24 @@ export class AiController {
   listActionItems(@Req() req: AuthenticatedRequest, @Query('status') status?: ActionItemStatus) {
     // Expune actiunile filtrate accesibile. acum.
     return this.aiService.listActionItems(req.user, { status });
+  }
+
+  @ApiOperation({ summary: 'Creeaza manual un action item pentru o sedinta' })
+  @Post('action-items')
+  createActionItem(
+    @Body() createActionItemDto: CreateManualActionItemDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    // Expune crearea actiunii manuale acum.
+    return this.aiService.createActionItem(createActionItemDto, req.user);
+  }
+
+  @ApiOperation({ summary: 'Listeaza action items pentru o sedinta' })
+  @ApiParam({ name: 'meetingId', description: 'ID-ul sedintei' })
+  @Get('meetings/:meetingId/action-items')
+  listMeetingActionItems(@Param('meetingId') meetingId: string, @Req() req: AuthenticatedRequest) {
+    // Expune actiunile meetingului curent acum.
+    return this.aiService.listMeetingActionItems(meetingId, req.user);
   }
 
   @ApiOperation({ summary: 'Actualizeaza un action item extras de AI' })

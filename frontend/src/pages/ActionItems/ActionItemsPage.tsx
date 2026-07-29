@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FiRefreshCw } from "react-icons/fi";
-import { Button, Card } from "../../components/atoms";
+import { FiPlus, FiRefreshCw } from "react-icons/fi";
+import toast from "react-hot-toast";
+import { Button, Card, Input, Select } from "../../components/atoms";
 import { FilterPill, Pagination } from "../../components/molecules";
 import { ActionItemList } from "../../components/organisms/action-item";
 import { AppLayout } from "../../components/templates";
-import { listActionItems } from "../../services/actionItems";
-import type { ActionItemListItem, ActionItemStatus } from "../../types";
+import { createActionItem, listActionItems } from "../../services/actionItems";
+import { listMeetings } from "../../services/meetings";
+import type { ActionItemListItem, ActionItemStatus, Meeting } from "../../types";
 
 type CardKey = "all" | ActionItemStatus;
 
@@ -32,6 +34,13 @@ export default function ActionItemsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeCard, setActiveCard] = useState<CardKey>(() => readCardFromParams(searchParams));
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [newMeetingId, setNewMeetingId] = useState("");
+  const [newTask, setNewTask] = useState("");
+  const [newResponsiblePerson, setNewResponsiblePerson] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [newStatus, setNewStatus] = useState<ActionItemStatus>("Pending");
+  const [isCreating, setIsCreating] = useState(false);
   const [page, setPage] = useState(() => {
     const fromUrl = Number(searchParams.get("page"));
     return fromUrl > 0 ? fromUrl : 1;
@@ -87,9 +96,44 @@ export default function ActionItemsPage() {
     }
   };
 
+  const loadMeetings = async () => {
+    try {
+      const data = await listMeetings();
+      setMeetings(data);
+      setNewMeetingId((current) => current || data[0]?.id || "");
+    } catch {
+      toast.error("Couldn't load meetings.");
+    }
+  };
+
+  const saveNewActionItem = async () => {
+    if (!newMeetingId || !newTask.trim() || !newResponsiblePerson.trim()) return;
+    setIsCreating(true);
+    try {
+      await createActionItem({
+        meetingId: newMeetingId,
+        task: newTask.trim(),
+        responsiblePerson: newResponsiblePerson.trim(),
+        dueDate: newDueDate ? new Date(newDueDate).toISOString() : undefined,
+        status: newStatus,
+      });
+      toast.success("Action item added.");
+      setNewTask("");
+      setNewResponsiblePerson("");
+      setNewDueDate("");
+      setNewStatus("Pending");
+      await loadActionItems();
+    } catch {
+      toast.error("Couldn't add the action item.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadActionItems();
+      void loadMeetings();
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
@@ -152,6 +196,57 @@ export default function ActionItemsPage() {
         </div>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+        <Card title="Add action item">
+          <div className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(220px,2fr)_minmax(160px,1fr)_150px_150px] lg:items-end">
+            <Select
+              label="Meeting"
+              value={newMeetingId}
+              options={meetings.map((meeting) => ({
+                value: meeting.id,
+                label: meeting.title,
+              }))}
+              onChange={(event) => setNewMeetingId(event.target.value)}
+            />
+            <Input
+              label="Task"
+              value={newTask}
+              onChange={(event) => setNewTask(event.target.value)}
+            />
+            <Input
+              label="Assignee"
+              value={newResponsiblePerson}
+              onChange={(event) => setNewResponsiblePerson(event.target.value)}
+            />
+            <Input
+              label="Due date"
+              type="date"
+              value={newDueDate}
+              onChange={(event) => setNewDueDate(event.target.value)}
+            />
+            <Select
+              label="Status"
+              value={newStatus}
+              options={[
+                { value: "Pending", label: "Pending" },
+                { value: "In Progress", label: "In Progress" },
+                { value: "Completed", label: "Completed" },
+              ]}
+              onChange={(event) => setNewStatus(event.target.value as ActionItemStatus)}
+            />
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              leftIcon={<FiPlus />}
+              isLoading={isCreating}
+              disabled={!newMeetingId || !newTask.trim() || !newResponsiblePerson.trim()}
+              onClick={() => void saveNewActionItem()}
+            >
+              Add action item
+            </Button>
+          </div>
+        </Card>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {cards.map((group) => {

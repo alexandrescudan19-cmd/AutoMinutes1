@@ -5,7 +5,8 @@ import { Button, Card } from "../../../atoms";
 import { Modal } from "../../../molecules/common";
 import ActionItemList from "../../action-item/ActionItemList/ActionItemList.tsx";
 import TranscriptUploadForm from "../../transcript/TranscriptUploadForm/TranscriptUploadForm.tsx";
-import { getAiResult, getAiResultActionItems } from "../../../../services/ai";
+import { getAiResult } from "../../../../services/ai";
+import { listMeetingActionItems } from "../../../../services/actionItems";
 import {
   listMeetingTranscriptVersions,
   restoreMeetingTranscriptVersion,
@@ -38,17 +39,21 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
   const [expandedTranscriptId, setExpandedTranscriptId] = useState("");
   const [restoringTranscriptId, setRestoringTranscriptId] = useState("");
 
+  const loadActionItems = useCallback(async () => {
+    try {
+      setActionItems(await listMeetingActionItems(meeting.id));
+    } catch {
+      toast.error("Couldn't load action items.");
+    }
+  }, [meeting.id]);
+
   const loadResult = useCallback(async (aiResultId: string) => {
     // Incarca rezultatele AI curente.
     setIsLoading(true);
     setError("");
     try {
-      const [result, actionItemsResponse] = await Promise.all([
-        getAiResult(aiResultId),
-        getAiResultActionItems(aiResultId),
-      ]);
+      const result = await getAiResult(aiResultId);
       setAiResult(result);
-      setActionItems(actionItemsResponse.actionItems);
     } catch {
       setError("Couldn't load AI results.");
     } finally {
@@ -74,12 +79,12 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
         void loadResult(meeting.aiResultId);
       } else {
         setAiResult(null);
-        setActionItems([]);
       }
+      void loadActionItems();
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [meeting.aiResultId, loadResult]);
+  }, [meeting.aiResultId, loadActionItems, loadResult]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -109,6 +114,7 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
     setAiResult(result.aiResult);
     setActionItems(result.actionItems);
     setSubTab("summary");
+    void loadActionItems();
     void loadTranscriptVersions();
     onMeetingChanged();
   };
@@ -122,10 +128,11 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
 
       if (result.aiResultId) {
         await loadResult(result.aiResultId);
+        await loadActionItems();
         setSubTab("summary");
       } else {
         setAiResult(null);
-        setActionItems([]);
+        await loadActionItems();
         setSubTab("transcript");
       }
 
@@ -144,8 +151,8 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
     if (aiResult.keyPoints.length > 0) subTabs.push({ key: "keyPoints", label: "Key points" });
     if (aiResult.decisions.length > 0) subTabs.push({ key: "decisions", label: "Decisions" });
     if (aiResult.followUpNotes) subTabs.push({ key: "followUp", label: "Follow-up" });
-    subTabs.push({ key: "actionItems", label: "Action items" });
   }
+  subTabs.push({ key: "actionItems", label: "Action items" });
 
   return (
     <div className="flex flex-col gap-4">
@@ -321,11 +328,16 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
         </Card>
       )}
 
-      {subTab === "actionItems" && aiResult && (
+      {subTab === "actionItems" && (
         <Card title="Action items">
           <ActionItemList
             items={actionItems}
-            onChanged={() => meeting.aiResultId && void loadResult(meeting.aiResultId)}
+            meetingId={meeting.id}
+            allowCreate
+            onChanged={() => {
+              void loadActionItems();
+              onMeetingChanged();
+            }}
           />
         </Card>
       )}

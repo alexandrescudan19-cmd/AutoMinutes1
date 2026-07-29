@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MeetingsController } from '../controllers/meetings.controller';
+import { ActionItem, ActionItemSchema } from '../models/action-item.schema';
 import { TranscriptsController } from '../controllers/transcripts.controller';
 import { AIResult, AIResultSchema } from '../models/ai-result.schema';
 import { Attendee, AttendeeSchema } from '../models/attendee.schema';
@@ -9,6 +10,7 @@ import { Meeting, MeetingSchema } from '../models/meeting.schema';
 import { Notification, NotificationSchema } from '../models/notification.schema';
 import { Transcript, TranscriptSchema } from '../models/transcript.schema';
 import { AttendeesRepository } from '../repositories/attendees.repository';
+import { ActionItemsRepository } from '../repositories/action-items.repository';
 import { AiResultsRepository } from '../repositories/ai-results.repository';
 import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
@@ -30,6 +32,7 @@ import { CryptoModule } from './crypto.module';
       { name: Notification.name, schema: NotificationSchema },
       { name: Transcript.name, schema: TranscriptSchema },
       { name: AIResult.name, schema: AIResultSchema },
+      { name: ActionItem.name, schema: ActionItemSchema },
     ]),
     UsersModule,
     CryptoModule,
@@ -42,6 +45,7 @@ import { CryptoModule } from './crypto.module';
     GoogleMeetTranscriptService,
     TranscriptAutoImportService,
     AttendeesRepository,
+    ActionItemsRepository,
     AiResultsRepository,
     InvitationsRepository,
     NotificationsRepository,

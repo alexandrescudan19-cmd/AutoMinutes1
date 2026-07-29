@@ -13,6 +13,9 @@ export type ActionItemDocument = HydratedDocument<ActionItem>;
 export class ActionItem {
   id!: string;
 
+  @Prop({ type: Types.ObjectId, ref: 'Meeting' })
+  meetingId?: string;
+
   @Prop({ type: Types.ObjectId, ref: 'AIResult' })
   aiResultId?: string;
 

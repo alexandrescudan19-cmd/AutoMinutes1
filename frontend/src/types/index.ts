@@ -94,6 +94,7 @@ export type UpdateAttendeeInput = Partial<CreateAttendeeInput>;
 
 export interface ActionItem {
   id: string;
+  meetingId?: string;
   aiResultId?: string;
   task: string;
   responsiblePerson: string;
@@ -112,6 +113,14 @@ export interface ActionItemListItem extends ActionItem {
 export interface UpdateActionItemInput {
   task?: string;
   responsiblePerson?: string;
+  dueDate?: string;
+  status?: ActionItemStatus;
+}
+
+export interface CreateActionItemInput {
+  meetingId: string;
+  task: string;
+  responsiblePerson: string;
   dueDate?: string;
   status?: ActionItemStatus;
 }

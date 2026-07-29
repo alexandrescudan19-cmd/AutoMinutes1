@@ -50,6 +50,41 @@ export class ActionItemsRepository {
     return actionItems.map((actionItem) => this.toModel(actionItem));
   }
 
+  async findByMeetingId(meetingId: string, aiResultId?: string): Promise<ActionItem[]> {
+    // Gaseste actiunile meetingului curent acum.
+    const filters: Record<string, unknown>[] = [{ meetingId }];
+    if (aiResultId) {
+      filters.push({ aiResultId });
+    }
+
+    const actionItems = await this.actionItemModel
+      .find({ $or: filters })
+      .sort({ status: 1, dueDate: 1, createdAt: -1 })
+      .exec();
+    return actionItems.map((actionItem) => this.toModel(actionItem));
+  }
+
+  async findByMeetingIds(meetingIds: string[], aiResultIds: string[]): Promise<ActionItem[]> {
+    // Gaseste actiunile meetingurilor accesibile acum.
+    if (meetingIds.length === 0 && aiResultIds.length === 0) {
+      return [];
+    }
+
+    const filters: Record<string, unknown>[] = [];
+    if (meetingIds.length > 0) {
+      filters.push({ meetingId: { $in: meetingIds } });
+    }
+    if (aiResultIds.length > 0) {
+      filters.push({ aiResultId: { $in: aiResultIds } });
+    }
+
+    const actionItems = await this.actionItemModel
+      .find({ $or: filters })
+      .sort({ status: 1, dueDate: 1, createdAt: -1 })
+      .exec();
+    return actionItems.map((actionItem) => this.toModel(actionItem));
+  }
+
   async findOne(id: string): Promise<ActionItem | undefined> {
     // Gaseste actiunea dupa id. acum.
     const actionItem = await this.actionItemModel.findById(id).exec();
@@ -76,6 +111,7 @@ export class ActionItemsRepository {
     // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
+      meetingId: document.meetingId,
       aiResultId: document.aiResultId,
       task: document.task,
       responsiblePerson: document.responsiblePerson,

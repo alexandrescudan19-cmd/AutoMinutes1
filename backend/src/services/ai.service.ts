@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { CreateActionItemDto } from '../dto/ai/create-action-item.dto';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
 import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItem, ActionItemStatus } from '../models/action-item.schema';
@@ -109,6 +110,17 @@ export class AiService {
     };
   }
 
+  async listMeetingActionItems(meetingId: string, user: AuthenticatedUser) {
+    // Listeaza actiunile meetingului curent acum.
+    const meeting = await this.getAccessibleMeeting(meetingId, user);
+    const actionItems = await this.actionItemsRepository.findByMeetingId(
+      meeting.id,
+      meeting.aiResultId,
+    );
+
+    return actionItems.map((actionItem) => this.withMeeting(actionItem, meeting));
+  }
+
   async listActionItems(user: AuthenticatedUser, filters?: { status?: ActionItemStatus }) {
     // Listeaza actiunile accesibile utilizatorului. acum.
     const meetings = await this.findAccessibleMeetings(user);
@@ -117,19 +129,44 @@ export class AiService {
         .filter((meeting) => meeting.aiResultId)
         .map((meeting) => [meeting.aiResultId as string, meeting]),
     );
-    const actionItems = await this.actionItemsRepository.findByAiResultIds([
-      ...meetingsByAiResultId.keys(),
-    ]);
+    const meetingsById = new Map(meetings.map((meeting) => [meeting.id, meeting]));
+    const actionItems = await this.actionItemsRepository.findByMeetingIds(
+      [...meetingsById.keys()],
+      [...meetingsByAiResultId.keys()],
+    );
     const filteredActionItems = filters?.status
       ? actionItems.filter((actionItem) => actionItem.status === filters.status)
       : actionItems;
 
     return filteredActionItems
       .map((actionItem) => {
-        const meeting = meetingsByAiResultId.get(actionItem.aiResultId ?? '');
+        const meeting =
+          meetingsById.get(actionItem.meetingId ?? '') ??
+          meetingsByAiResultId.get(actionItem.aiResultId ?? '');
         return meeting ? this.withMeeting(actionItem, meeting) : undefined;
       })
       .filter((actionItem): actionItem is ActionItemListItem => Boolean(actionItem));
+  }
+
+  async createActionItem(
+    dto: CreateActionItemDto & { meetingId: string },
+    user: AuthenticatedUser,
+  ) {
+    // Creeaza actiunea manuala meetingului acum.
+    const meeting = await this.getManageableMeeting(dto.meetingId, user);
+    if (!dto.task?.trim() || !dto.responsiblePerson?.trim()) {
+      throw new BadRequestException('Task si responsiblePerson sunt obligatorii.');
+    }
+
+    const actionItem = await this.actionItemsRepository.create({
+      meetingId: meeting.id,
+      task: dto.task.trim(),
+      responsiblePerson: dto.responsiblePerson.trim(),
+      dueDate: this.parseDueDate(dto.dueDate?.toString()),
+      status: dto.status ?? ActionItemStatus.Pending,
+    });
+
+    return this.withMeeting(actionItem, meeting);
   }
 
   async updateActionItem(
@@ -171,9 +208,11 @@ export class AiService {
       throw new NotFoundException(`Action item #${id} not found`);
     }
 
-    await this.aiResultsRepository.update(aiResult.id, {
-      actionItemIds: aiResult.actionItemIds.filter((actionItemId) => actionItemId !== id),
-    });
+    if (aiResult) {
+      await this.aiResultsRepository.update(aiResult.id, {
+        actionItemIds: aiResult.actionItemIds.filter((actionItemId) => actionItemId !== id),
+      });
+    }
 
     return removed;
   }
@@ -181,8 +220,16 @@ export class AiService {
   private async resolveActionItemContext(
     actionItem: ActionItem,
     user: AuthenticatedUser,
-  ): Promise<{ aiResult: AIResult; meeting: Meeting }> {
+  ): Promise<{ aiResult?: AIResult; meeting: Meeting }> {
     // Verifica accesul la actiune. acum.
+    if (actionItem.meetingId) {
+      const meeting = await this.getManageableMeeting(actionItem.meetingId, user);
+      const aiResult = actionItem.aiResultId
+        ? await this.aiResultsRepository.findOne(actionItem.aiResultId)
+        : undefined;
+      return { aiResult, meeting };
+    }
+
     if (!actionItem.aiResultId) {
       throw new NotFoundException('Action item-ul nu are un meeting asociat.');
     }
@@ -244,6 +291,7 @@ export class AiService {
       const actionItems = await Promise.all(
         (aiOutput.actionItems ?? []).map((actionItem) =>
           this.actionItemsRepository.create({
+            meetingId,
             aiResultId: aiResult.id,
             task: actionItem.task,
             responsiblePerson: actionItem.responsiblePerson ?? 'Nealocat',
@@ -429,6 +477,31 @@ ${transcript}
 
     await this.assertCanAccessMeeting(meeting, user);
     return { aiResult, meeting };
+  }
+
+  private async getAccessibleMeeting(meetingId: string, user: AuthenticatedUser) {
+    // Gaseste meetingul permis utilizatorului acum.
+    const meeting = await this.meetingsRepository.findOne(meetingId);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${meetingId} not found`);
+    }
+
+    await this.assertCanAccessMeeting(meeting, user);
+    return meeting;
+  }
+
+  private async getManageableMeeting(meetingId: string, user: AuthenticatedUser) {
+    // Gaseste meetingul editabil utilizatorului acum.
+    const meeting = await this.meetingsRepository.findOne(meetingId);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${meetingId} not found`);
+    }
+
+    if (meeting.ownerId?.toString() !== user.userId) {
+      throw new ForbiddenException('Doar creatorul meeting-ului poate modifica action items.');
+    }
+
+    return meeting;
   }
 
   private async findAccessibleMeetings(user: AuthenticatedUser): Promise<Meeting[]> {

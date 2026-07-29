@@ -1,10 +1,25 @@
 import { api } from "./api";
-import type { ActionItemListItem, ActionItemStatus, UpdateActionItemInput } from "../types";
+import type {
+  ActionItemListItem,
+  ActionItemStatus,
+  CreateActionItemInput,
+  UpdateActionItemInput,
+} from "../types";
 
 export function listActionItems(status?: ActionItemStatus) {
   return api
     .get<ActionItemListItem[]>("/ai/action-items", { params: status ? { status } : undefined })
     .then((res) => res.data);
+}
+
+export function listMeetingActionItems(meetingId: string) {
+  return api
+    .get<ActionItemListItem[]>(`/ai/meetings/${meetingId}/action-items`)
+    .then((res) => res.data);
+}
+
+export function createActionItem(input: CreateActionItemInput) {
+  return api.post<ActionItemListItem>("/ai/action-items", input).then((res) => res.data);
 }
 
 export function updateActionItem(id: string, input: UpdateActionItemInput) {
