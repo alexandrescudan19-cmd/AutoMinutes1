@@ -212,13 +212,13 @@ export default function MeetingAttendeesPanel({ meeting, onChanged }: MeetingAtt
           ) : (
             <div
               key={attendee.id}
-              className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700"
+              className="flex flex-col gap-3 rounded-lg border border-gray-200 px-3 py-2 sm:flex-row sm:items-center dark:border-gray-700"
             >
               <FiUserCheck className="shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{attendee.name}</p>
+                <p className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">{attendee.name}</p>
                 {attendee.email && (
-                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">{attendee.email}</p>
+                  <p className="break-all text-xs text-gray-500 dark:text-gray-400">{attendee.email}</p>
                 )}
               </div>
               <span

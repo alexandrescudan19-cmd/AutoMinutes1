@@ -54,9 +54,9 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
           {typeof title === 'string' ? (
-            <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+            <h3 className="min-w-0 break-words font-medium text-gray-900 dark:text-gray-100">{title}</h3>
           ) : (
             title
           )}

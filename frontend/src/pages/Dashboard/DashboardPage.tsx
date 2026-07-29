@@ -116,9 +116,9 @@ export default function DashboardPage() {
                       key={meeting.id}
                       type="button"
                       onClick={() => openMeeting(meeting.id, "ai")}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-left text-sm hover:bg-red-50 dark:border-red-900 dark:bg-gray-900 dark:hover:bg-red-950/40"
+                      className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-left text-sm hover:bg-red-50 dark:border-red-900 dark:bg-gray-900 dark:hover:bg-red-950/40"
                     >
-                      <span className="min-w-0 flex-1 truncate text-gray-900 dark:text-gray-100">
+                      <span className="min-w-0 flex-1 break-words text-gray-900 dark:text-gray-100">
                         {meeting.title}
                       </span>
                       <span className="shrink-0 text-xs font-medium text-red-600 dark:text-red-400">
@@ -150,11 +150,11 @@ export default function DashboardPage() {
                         key={meeting.id}
                         type="button"
                         onClick={() => openMeeting(meeting.id)}
-                        className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-left hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                        className="flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-2 text-left hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                       >
                         <FiCalendar className="shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <p className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">
                             {meeting.title}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                           key={item.id}
                           type="button"
                           onClick={() => openMeeting(item.meetingId)}
-                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                          className={`flex flex-col gap-3 rounded-lg border px-3 py-2 text-left hover:bg-gray-50 sm:flex-row sm:items-start dark:hover:bg-gray-800 ${
                             overdue ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/40" : "border-gray-200 dark:border-gray-700"
                           }`}
                         >
@@ -188,10 +188,10 @@ export default function DashboardPage() {
                             <FiAlertTriangle className="shrink-0 text-red-500 dark:text-red-400" aria-hidden="true" />
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <p className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">
                               {item.task}
                             </p>
-                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
+                            <p className="break-words text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
                           </div>
                           <span
                             className={`shrink-0 text-xs ${overdue ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}

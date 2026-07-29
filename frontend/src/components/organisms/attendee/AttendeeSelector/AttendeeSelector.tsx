@@ -40,9 +40,6 @@ export default function AttendeeSelector({
   const [pendingDeleteId, setPendingDeleteId] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
-  const [isDeletingAll, setIsDeletingAll] = useState(false);
-
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -73,6 +70,7 @@ export default function AttendeeSelector({
   );
 
   const findSelectionConflict = (candidate: { email?: string; roleInMeeting: string }): string => {
+    // Valideaza invitatul in formular.
     const email = candidate.email?.trim().toLowerCase();
     if (email && currentUser?.email?.toLowerCase() === email) {
       return "That's your own email - you're already added as the organizer.";
@@ -102,6 +100,7 @@ export default function AttendeeSelector({
   const deselect = (id: string) => onChange(selectedIds.filter((sid) => sid !== id));
 
   const handleAddAttendee = async () => {
+    // Creeaza si selecteaza participant.
     if (!newName.trim()) return;
     if (requireEmail && !newEmail.trim()) {
       setError("Email is required for upcoming meetings.");
@@ -133,6 +132,7 @@ export default function AttendeeSelector({
   };
 
   const confirmDelete = async () => {
+    // Sterge participantul salvat global.
     setIsDeleting(true);
     try {
       await deleteAttendee(pendingDeleteId);
@@ -146,22 +146,6 @@ export default function AttendeeSelector({
     }
   };
 
-  const confirmDeleteAll = async () => {
-    setIsDeletingAll(true);
-    try {
-      const ids = attendees.map((a) => a.id);
-      const results = await Promise.allSettled(ids.map((id) => deleteAttendee(id)));
-      const deletedIds = new Set(ids.filter((_, index) => results[index].status === "fulfilled"));
-      setAttendees((prev) => prev.filter((a) => !deletedIds.has(a.id)));
-      onChange(selectedIds.filter((id) => !deletedIds.has(id)));
-      if (results.some((result) => result.status === "rejected")) {
-        setError("Some attendees couldn't be deleted.");
-      }
-      setIsDeleteAllOpen(false);
-    } finally {
-      setIsDeletingAll(false);
-    }
-  };
 
   if (isLoading) return <Loader size="sm" label="Loading attendees…" />;
 
@@ -170,10 +154,23 @@ export default function AttendeeSelector({
       <p className="min-h-[1rem] text-xs text-red-600 dark:text-red-400">{error}</p>
 
       {selectedAttendees.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {selectedAttendees.map((a) => (
-            <Chip key={a.id} label={a.name} onRemove={() => deselect(a.id)} removeLabel={`Unselect ${a.name}`} />
-          ))}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {selectedAttendees.map((a) => (
+              <Chip key={a.id} label={a.name} onRemove={() => deselect(a.id)} removeLabel={`Unselect ${a.name}`} />
+            ))}
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              leftIcon={<FiTrash2 aria-hidden="true" />}
+              onClick={() => onChange([])}
+            >
+              Clear selected
+            </Button>
+          </div>
         </div>
       )}
 
@@ -216,15 +213,15 @@ export default function AttendeeSelector({
               onChange={setQuery}
               placeholder="Search attendees…"
             />
-            {attendees.length > 0 && (
+            {selectedIds.length > 0 && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 leftIcon={<FiTrash2 aria-hidden="true" />}
-                onClick={() => setIsDeleteAllOpen(true)}
+                onClick={() => onChange([])}
               >
-                Delete all
+                Clear selected
               </Button>
             )}
           </div>
@@ -242,10 +239,10 @@ export default function AttendeeSelector({
                   <button
                     type="button"
                     onClick={() => select(a.id)}
-                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+                    className="flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-left"
                   >
                     <FiUserCheck className="shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate text-gray-900 dark:text-gray-100">{a.name}</span>
+                    <span className="min-w-0 flex-1 break-words text-gray-900 dark:text-gray-100">{a.name}</span>
                     <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">{a.roleInMeeting}</span>
                   </button>
                   <button
@@ -270,16 +267,6 @@ export default function AttendeeSelector({
         isLoading={isDeleting}
         onConfirm={() => void confirmDelete()}
         onCancel={() => setPendingDeleteId("")}
-      />
-
-      <ConfirmDialog
-        isOpen={isDeleteAllOpen}
-        title="Delete all saved attendees?"
-        message={`Permanently delete all ${attendees.length} saved attendees? They'll also disappear from meetings that already use them.`}
-        variant="danger"
-        isLoading={isDeletingAll}
-        onConfirm={() => void confirmDeleteAll()}
-        onCancel={() => setIsDeleteAllOpen(false)}
       />
     </div>
   );

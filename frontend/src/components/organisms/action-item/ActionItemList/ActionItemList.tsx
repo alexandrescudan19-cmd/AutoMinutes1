@@ -63,6 +63,7 @@ export default function ActionItemList({
 
   const groupedItems = useMemo(
     () =>
+      // Grupeaza taskurile dupa status.
       STATUS_GROUPS.map((group) => ({
         ...group,
         items: items.filter((item) => getGroupKey(item.status) === group.key),
@@ -71,6 +72,7 @@ export default function ActionItemList({
   );
 
   const startEditing = (item: ActionItem) => {
+    // Pregateste formularul de editare.
     setEditingId(item.id);
     setEditTask(item.task);
     setEditResponsiblePerson(item.responsiblePerson);
@@ -81,6 +83,7 @@ export default function ActionItemList({
   const cancelEditing = () => setEditingId("");
 
   const saveEditing = async () => {
+    // Salveaza modificarile taskului.
     if (!editTask.trim() || !editResponsiblePerson.trim()) return;
     setIsSaving(true);
     try {
@@ -101,6 +104,7 @@ export default function ActionItemList({
   };
 
   const toggleStatus = async (item: ActionItem) => {
+    // Comuta rapid statusul taskului.
     setBusyToggleId(item.id);
     try {
       await updateActionItem(item.id, {
@@ -115,6 +119,7 @@ export default function ActionItemList({
   };
 
   const confirmDelete = async () => {
+    // Sterge taskul confirmat.
     setIsDeleting(true);
     try {
       await deleteActionItem(pendingDeleteId);
@@ -190,7 +195,7 @@ export default function ActionItemList({
               return (
                 <div
                   key={item.id}
-                  className={`grid items-center gap-3 rounded-lg border bg-white p-3 md:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] dark:bg-gray-900 ${
+                  className={`grid min-w-0 gap-3 rounded-lg border bg-white p-3 lg:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] lg:items-center dark:bg-gray-900 ${
                     overdue ? "border-red-400 dark:border-red-700" : "border-gray-200 dark:border-gray-700"
                   }`}
                 >
@@ -203,16 +208,16 @@ export default function ActionItemList({
                     aria-label={item.task}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{item.task}</p>
+                    <p className="break-words text-sm font-medium leading-5 text-gray-900 dark:text-gray-100">{item.task}</p>
                     {showMeetingTitle && hasMeetingTitle(item) && (
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
+                      <p className="mt-1 break-words text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
                     )}
                   </div>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  <div className="min-w-0 break-words rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     {item.responsiblePerson || "Unassigned"}
                   </div>
                   <div
-                    className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-sm ${
+                    className={`flex min-w-0 items-center gap-1 rounded-lg border px-3 py-2 text-sm ${
                       overdue
                         ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
                         : "border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
@@ -222,7 +227,7 @@ export default function ActionItemList({
                     {formatDate(item.dueDate) || "No due date"}
                   </div>
                   <StatusBadge status={item.status} />
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {showMeetingTitle && hasMeetingTitle(item) && onOpenMeeting && (
                       <Button
                         type="button"
