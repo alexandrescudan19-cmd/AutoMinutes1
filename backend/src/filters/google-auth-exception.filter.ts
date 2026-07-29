@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 @Catch(UnauthorizedException)
 export class GoogleAuthExceptionFilter implements ExceptionFilter {
   catch(exception: UnauthorizedException, host: ArgumentsHost) {
+    // Redirectioneaza erorile OAuth Google. acum.
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();

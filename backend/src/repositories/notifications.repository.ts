@@ -14,6 +14,7 @@ export class NotificationsRepository {
   ) {}
 
   async create(data: CreateNotificationData): Promise<Notification> {
+    // Creeaza notificarea in baza. acum.
     const notification = await this.notificationModel.create({
       sentAt: data.sentAt ?? new Date().toISOString(),
       ...data,
@@ -22,11 +23,13 @@ export class NotificationsRepository {
   }
 
   async findAll(): Promise<Notification[]> {
+    // Listeaza toate notificarile salvate. acum.
     const notifications = await this.notificationModel.find().exec();
     return notifications.map((notification) => this.toModel(notification));
   }
 
   async findByRecipientEmail(email: string): Promise<Notification[]> {
+    // Gaseste notificarile dupa email. acum.
     const notifications = await this.notificationModel
       .find({ recipientEmail: email.toLowerCase().trim() })
       .sort({ sentAt: -1 })
@@ -35,11 +38,13 @@ export class NotificationsRepository {
   }
 
   async findOne(id: string): Promise<Notification | undefined> {
+    // Gaseste notificarea dupa id. acum.
     const notification = await this.notificationModel.findById(id).exec();
     return notification ? this.toModel(notification) : undefined;
   }
 
   async update(id: string, data: Partial<Notification>): Promise<Notification | undefined> {
+    // Actualizeaza notificarea dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const notification = await this.notificationModel
@@ -49,11 +54,13 @@ export class NotificationsRepository {
   }
 
   async remove(id: string): Promise<Notification | undefined> {
+    // Sterge notificarea dupa id. acum.
     const notification = await this.notificationModel.findByIdAndDelete(id).exec();
     return notification ? this.toModel(notification) : undefined;
   }
 
   private toModel(document: NotificationDocument): Notification {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       title: document.title,
@@ -69,6 +76,7 @@ export class NotificationsRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

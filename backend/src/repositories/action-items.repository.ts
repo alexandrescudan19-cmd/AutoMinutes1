@@ -14,6 +14,7 @@ export class ActionItemsRepository {
   ) {}
 
   async create(data: CreateActionItemData): Promise<ActionItem> {
+    // Creeaza actiunea in baza. acum.
     const actionItem = await this.actionItemModel.create({
       status: data.status ?? ActionItemStatus.Pending,
       ...data,
@@ -22,11 +23,13 @@ export class ActionItemsRepository {
   }
 
   async findAll(): Promise<ActionItem[]> {
+    // Listeaza toate actiunile salvate. acum.
     const actionItems = await this.actionItemModel.find().exec();
     return actionItems.map((actionItem) => this.toModel(actionItem));
   }
 
   async findByAiResultId(aiResultId: string): Promise<ActionItem[]> {
+    // Gaseste actiunile rezultatului AI. acum.
     const actionItems = await this.actionItemModel
       .find({ aiResultId })
       .sort({ status: 1, dueDate: 1, createdAt: -1 })
@@ -35,6 +38,7 @@ export class ActionItemsRepository {
   }
 
   async findByAiResultIds(aiResultIds: string[]): Promise<ActionItem[]> {
+    // Gaseste actiunile rezultatelor AI. acum.
     if (aiResultIds.length === 0) {
       return [];
     }
@@ -47,11 +51,13 @@ export class ActionItemsRepository {
   }
 
   async findOne(id: string): Promise<ActionItem | undefined> {
+    // Gaseste actiunea dupa id. acum.
     const actionItem = await this.actionItemModel.findById(id).exec();
     return actionItem ? this.toModel(actionItem) : undefined;
   }
 
   async update(id: string, data: Partial<ActionItem>): Promise<ActionItem | undefined> {
+    // Actualizeaza actiunea dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const actionItem = await this.actionItemModel
@@ -61,11 +67,13 @@ export class ActionItemsRepository {
   }
 
   async remove(id: string): Promise<ActionItem | undefined> {
+    // Sterge actiunea dupa id. acum.
     const actionItem = await this.actionItemModel.findByIdAndDelete(id).exec();
     return actionItem ? this.toModel(actionItem) : undefined;
   }
 
   private toModel(document: ActionItemDocument): ActionItem {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       aiResultId: document.aiResultId,
@@ -80,6 +88,7 @@ export class ActionItemsRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

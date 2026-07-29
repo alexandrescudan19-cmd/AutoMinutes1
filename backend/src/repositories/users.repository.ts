@@ -30,6 +30,7 @@ export class UsersRepository {
   constructor(@InjectModel(User.name) private readonly userModel: Model<UserDocument>) {}
 
   async create(data: CreateUserData): Promise<User> {
+    // Creeaza utilizatorul in baza. acum.
     const user = await this.userModel.create({
       role: data.role ?? UserRole.User,
       ...data,
@@ -38,26 +39,31 @@ export class UsersRepository {
   }
 
   async findAll(): Promise<User[]> {
+    // Listeaza toti utilizatorii salvati. acum.
     const users = await this.userModel.find().exec();
     return users.map((user) => this.toModel(user));
   }
 
   async findOne(id: string): Promise<User | undefined> {
+    // Gaseste utilizatorul dupa id. acum.
     const user = await this.userModel.findById(id).exec();
     return user ? this.toModel(user) : undefined;
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
+    // Gaseste utilizatorul dupa email. acum.
     const user = await this.userModel.findOne({ email: email.toLocaleLowerCase().trim() }).exec();
     return user ? this.toModel(user) : undefined;
   }
 
   async findByVerificationToken(token: string): Promise<User | undefined> {
+    // Gaseste utilizatorul dupa token. acum.
     const user = await this.userModel.findOne({ verificationToken: token }).exec();
     return user ? this.toModel(user) : undefined;
   }
 
   async findByResetToken(token: string): Promise<User | undefined> {
+    // Gaseste tokenul valid resetare parola.
     const user = await this.userModel
       .findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: new Date() } })
       .exec();
@@ -65,6 +71,7 @@ export class UsersRepository {
   }
 
   async update(id: string, data: Partial<User>): Promise<User | undefined> {
+    // Actualizeaza utilizatorul dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const update = this.withoutUndefined(rest);
@@ -75,11 +82,13 @@ export class UsersRepository {
   }
 
   async remove(id: string): Promise<User | undefined> {
+    // Sterge utilizatorul dupa id. acum.
     const user = await this.userModel.findByIdAndDelete(id).exec();
     return user ? this.toModel(user) : undefined;
   }
 
   private toModel(document: UserDocument): User {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       firstName: document.firstName,
@@ -99,6 +108,7 @@ export class UsersRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

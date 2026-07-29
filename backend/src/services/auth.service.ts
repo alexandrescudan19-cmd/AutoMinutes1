@@ -26,6 +26,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<Omit<User, 'passwordHash' | 'verificationToken'>> {
+    // Valideaza si creeaza cont nou.
     if (!dto.email?.includes('@')) {
       throw new BadRequestException('Invalid email address');
     }
@@ -61,6 +62,7 @@ export class AuthService {
   async login(
     dto: LoginDto,
   ): Promise<{ accessToken: string; user: Omit<User, 'passwordHash' | 'verificationToken'> }> {
+    // Verifica parola si emite token.
     const user = await this.usersRepository.findByEmail(dto.email ?? '');
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -83,6 +85,7 @@ export class AuthService {
   }
 
   async verifyEmail(token: string): Promise<{ message: string }> {
+    // Confirma emailul prin token primit.
     if (!token) {
       throw new BadRequestException('Verification token is missing');
     }
@@ -101,6 +104,7 @@ export class AuthService {
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    // Trimite link pentru resetare parola.
     const genericResponse = {
       message: 'A password reset link has been sent!',
     };
@@ -115,7 +119,7 @@ export class AuthService {
     }
 
     const resetPasswordToken = randomBytes(32).toString('hex');
-    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // valabilitate o ora
+    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // Tokenul expira peste o ora.
 
     await this.usersRepository.update(user.id, {
       resetPasswordToken,
@@ -128,6 +132,7 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    // Schimba parola folosind token valid.
     if (!dto.token) {
       throw new BadRequestException('Reset token is missing');
     }
@@ -156,6 +161,7 @@ export class AuthService {
     firstName: string;
     lastName: string;
   }): Promise<{ accessToken: string }> {
+    // Autentifica utilizatorul prin Google. acum.
     if (!googleUser.email) {
       throw new UnauthorizedException('Google account has no email');
     }
@@ -188,6 +194,7 @@ export class AuthService {
   }
 
   async connectGoogleAccount(userId: string, refreshToken?: string): Promise<void> {
+    // Salveaza refresh tokenul Google criptat.
     if (!refreshToken) {
       throw new BadRequestException(
         'Google nu a returnat un refresh token. Deconectează accesul aplicației din contul tău Google și încearcă din nou.',
@@ -199,15 +206,18 @@ export class AuthService {
   }
 
   async getGoogleConnectionStatus(userId: string): Promise<{ connected: boolean }> {
+    // Verifica legatura contului Google. acum.
     const user = await this.usersRepository.findOne(userId);
     return { connected: Boolean(user?.googleRefreshTokenEncrypted) };
   }
 
   async disconnectGoogleAccount(userId: string): Promise<void> {
+    // Sterge legatura contului Google. acum.
     await this.usersRepository.update(userId, { googleRefreshTokenEncrypted: null });
   }
 
   private sanitize(user: User): Omit<User, 'passwordHash' | 'verificationToken'> {
+    // Scoate datele sensibile din raspuns.
     const { passwordHash, verificationToken, ...rest } = user;
     void passwordHash;
     void verificationToken;

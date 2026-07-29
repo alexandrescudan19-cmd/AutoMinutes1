@@ -19,6 +19,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: Profile,
     done: VerifyCallback,
   ): void {
+    // Normalizeaza profilul primit Google. acum.
     const { name, emails } = profile;
     const user = {
       email: emails?.[0]?.value ?? '',

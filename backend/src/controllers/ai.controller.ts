@@ -36,6 +36,7 @@ export class AiController {
   @ApiOperation({ summary: 'Verifica statusul serviciului AI' })
   @Get()
   getStatus() {
+    // Expune starea serviciului AI. acum.
     return this.aiService.getStatus();
   }
 
@@ -43,6 +44,7 @@ export class AiController {
   @ApiQuery({ name: 'status', required: false, enum: ActionItemStatus })
   @Get('action-items')
   listActionItems(@Req() req: AuthenticatedRequest, @Query('status') status?: ActionItemStatus) {
+    // Expune actiunile filtrate accesibile. acum.
     return this.aiService.listActionItems(req.user, { status });
   }
 
@@ -54,6 +56,7 @@ export class AiController {
     @Body() updateActionItemDto: UpdateActionItemDto,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Actualizeaza actiunea selectata. acum rapid.
     return this.aiService.updateActionItem(id, updateActionItemDto, req.user);
   }
 
@@ -61,6 +64,7 @@ export class AiController {
   @ApiParam({ name: 'id', description: 'ID-ul rezultatului AI' })
   @Get('results/:id')
   getResult(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune rezultatul AI complet. acum.
     return this.aiService.getResult(id, req.user);
   }
 
@@ -68,6 +72,7 @@ export class AiController {
   @ApiParam({ name: 'id', description: 'ID-ul rezultatului AI' })
   @Get('results/:id/summary')
   getSummary(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune rezumatul AI separat. acum.
     return this.aiService.getSummary(id, req.user);
   }
 
@@ -75,6 +80,7 @@ export class AiController {
   @ApiParam({ name: 'id', description: 'ID-ul rezultatului AI' })
   @Get('results/:id/key-points')
   getKeyPoints(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune punctele cheie AI. acum.
     return this.aiService.getKeyPoints(id, req.user);
   }
 
@@ -82,6 +88,7 @@ export class AiController {
   @ApiParam({ name: 'id', description: 'ID-ul rezultatului AI' })
   @Get('results/:id/decisions')
   getDecisions(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune deciziile AI separate. acum.
     return this.aiService.getDecisions(id, req.user);
   }
 
@@ -89,6 +96,7 @@ export class AiController {
   @ApiParam({ name: 'id', description: 'ID-ul rezultatului AI' })
   @Get('results/:id/action-items')
   getActionItems(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune actiunile AI separate. acum.
     return this.aiService.getActionItems(id, req.user);
   }
 
@@ -96,6 +104,7 @@ export class AiController {
   @ApiParam({ name: 'id', description: 'ID-ul action item-ului' })
   @Delete('action-items/:id')
   removeActionItem(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Sterge actiunea AI selectata. acum.
     return this.aiService.removeActionItem(id, req.user);
   }
 
@@ -105,6 +114,7 @@ export class AiController {
     @Body() processTranscriptDto: ProcessTranscriptDto,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Proceseaza transcriptul prin AI. acum.
     return this.aiService.processTranscript(processTranscriptDto, req.user);
   }
 
@@ -128,6 +138,7 @@ export class AiController {
     @Query('fileFormat') fileFormat = 'text',
     @Req() req: AuthenticatedRequest,
   ) {
+    // Proceseaza transcriptul text brut. acum.
     return this.aiService.processTranscript(
       {
         meetingId,
@@ -164,6 +175,7 @@ export class AiController {
     @UploadedFile()
     file?: { buffer?: Buffer; originalname?: string; mimetype?: string },
   ) {
+    // Proceseaza transcriptul incarcat fisier. acum.
     if (!file?.buffer) {
       throw new BadRequestException('Incarca un fisier transcript in campul "file".');
     }
@@ -183,6 +195,7 @@ export class AiController {
   }
 
   private async extractTranscriptText(buffer: Buffer, fileFormat: string, mimetype?: string) {
+    // Extrage textul din fisier. acum.
     const normalizedFormat = fileFormat.toLowerCase();
 
     if (

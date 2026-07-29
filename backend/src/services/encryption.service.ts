@@ -7,6 +7,7 @@ const IV_LENGTH = 12;
 @Injectable()
 export class EncryptionService {
   encrypt(plainText: string): string {
+    // Cripteaza textul sensibil salvat. acum.
     const key = this.getKey();
     const iv = randomBytes(IV_LENGTH);
     const cipher = createCipheriv(ALGORITHM, key, iv);
@@ -19,6 +20,7 @@ export class EncryptionService {
   }
 
   decrypt(payload: string): string {
+    // Decripteaza textul sensibil salvat. acum.
     const [ivB64, authTagB64, encryptedB64] = payload.split(':');
     if (!ivB64 || !authTagB64 || !encryptedB64) {
       throw new InternalServerErrorException('Invalid encrypted payload format.');
@@ -37,6 +39,7 @@ export class EncryptionService {
   }
 
   private getKey(): Buffer {
+    // Citeste cheia secreta configurata. acum.
     const key = process.env.ENCRYPTION_KEY;
     if (!key || key.length !== 64) {
       throw new InternalServerErrorException(

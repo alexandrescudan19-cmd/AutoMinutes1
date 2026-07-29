@@ -13,6 +13,7 @@ export class MailService {
   });
 
   async sendVerificationEmail(to: string, token: string): Promise<void> {
+    // Trimite emailul de verificare cont.
     const verifyUrl = `${process.env.FRONTEND_URL}/verify?token=${token}`;
 
     await this.transporter.sendMail({
@@ -29,6 +30,7 @@ export class MailService {
   }
 
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+    // Trimite emailul pentru resetare parola.
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
     await this.transporter.sendMail({

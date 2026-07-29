@@ -13,6 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: { sub: string; email: string; role: string }) {
+    // Construieste userul din token. acum.
     return { userId: payload.sub, email: payload.email, role: payload.role };
   }
 }

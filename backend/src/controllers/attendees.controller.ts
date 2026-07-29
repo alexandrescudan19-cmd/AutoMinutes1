@@ -14,12 +14,14 @@ export class AttendeesController {
   @ApiOperation({ summary: 'Listeaza toti participantii' })
   @Get()
   findAll() {
+    // Expune participantii salvati global. acum.
     return this.attendeesService.findAll();
   }
 
   @ApiOperation({ summary: 'Creeaza un participant' })
   @Post()
   create(@Body() createAttendeeDto: CreateAttendeeDto) {
+    // Creeaza participant nou global. acum.
     return this.attendeesService.create(createAttendeeDto);
   }
 
@@ -27,6 +29,7 @@ export class AttendeesController {
   @ApiParam({ name: 'id', description: 'ID-ul participantului' })
   @Get(':id')
   findOne(@Param('id') id: string) {
+    // Expune participantul dupa id. acum.
     return this.attendeesService.findOne(id);
   }
 
@@ -34,6 +37,7 @@ export class AttendeesController {
   @ApiParam({ name: 'id', description: 'ID-ul participantului' })
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAttendeeDto: UpdateAttendeeDto) {
+    // Actualizeaza participantul dupa id. acum.
     return this.attendeesService.update(id, updateAttendeeDto);
   }
 
@@ -41,6 +45,7 @@ export class AttendeesController {
   @ApiParam({ name: 'id', description: 'ID-ul participantului' })
   @Delete(':id')
   remove(@Param('id') id: string) {
+    // Sterge participantul dupa id. acum.
     return this.attendeesService.remove(id);
   }
 }

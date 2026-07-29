@@ -13,6 +13,7 @@ export class TranscriptAutoImportService implements OnModuleInit, OnModuleDestro
   constructor(private readonly meetingsService: MeetingsService) {}
 
   onModuleInit() {
+    // Porneste importul automat periodic. acum.
     const enabled = process.env.AUTO_IMPORT_MEET_TRANSCRIPTS !== 'false';
     if (!enabled) {
       this.logger.log('Automatic Meet transcript import is disabled.');
@@ -33,12 +34,14 @@ export class TranscriptAutoImportService implements OnModuleInit, OnModuleDestro
   }
 
   onModuleDestroy() {
+    // Opreste intervalul la inchidere. acum.
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
   }
 
   private async runOnce() {
+    // Ruleaza o tura de import.
     if (this.isRunning) {
       return;
     }
@@ -65,6 +68,7 @@ export class TranscriptAutoImportService implements OnModuleInit, OnModuleDestro
   }
 
   private getPositiveNumber(raw: string | undefined, fallback: number) {
+    // Citeste numere configurabile pozitive. acum.
     const value = Number(raw);
     return Number.isFinite(value) && value > 0 ? value : fallback;
   }

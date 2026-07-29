@@ -23,6 +23,7 @@ export class GoogleCalendarService {
     input: CreateCalendarEventInput,
     refreshToken: string,
   ): Promise<CalendarEventResult> {
+    // Creeaza eveniment Google cu Meet.
     const calendar = this.createCalendarClient(refreshToken);
     const requestId = `autominutes-${Date.now()}`;
 
@@ -78,6 +79,7 @@ export class GoogleCalendarService {
     attendees: CreateCalendarEventInput['attendees'],
     refreshToken: string,
   ) {
+    // Adauga invitati in Calendar. acum.
     if (!attendees?.length) {
       return;
     }
@@ -120,6 +122,7 @@ export class GoogleCalendarService {
   }
 
   private createCalendarClient(refreshToken: string) {
+    // Creeaza clientul Google Calendar. acum.
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = process.env.GOOGLE_CALLBACK_URL;
@@ -135,6 +138,7 @@ export class GoogleCalendarService {
   }
 
   private getGoogleErrorMessage(error: unknown): string | undefined {
+    // Extrage mesajul erorii Google. acum.
     if (!error || typeof error !== 'object') {
       return undefined;
     }

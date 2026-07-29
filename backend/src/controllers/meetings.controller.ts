@@ -32,18 +32,21 @@ export class MeetingsController {
   @ApiOperation({ summary: 'Creeaza o sedinta' })
   @Post()
   create(@Body() createMeetingDto: CreateMeetingDto, @Req() req: AuthenticatedRequest) {
+    // Expune crearea unui meeting. acum.
     return this.meetingsService.create(createMeetingDto, req.user);
   }
 
   @ApiOperation({ summary: 'Listeaza toate sedintele' })
   @Get()
   findAll(@Req() req: AuthenticatedRequest) {
+    // Expune meetingurile accesibile userului. acum.
     return this.meetingsService.findAll(req.user);
   }
 
   @ApiOperation({ summary: 'Listeaza history-ul sedintelor cu search, sortare si paginare' })
   @Get('history')
   findHistory(@Query() query: MeetingHistoryQueryDto, @Req() req: AuthenticatedRequest) {
+    // Expune history filtrat paginat. acum.
     return this.meetingsService.findHistory(req.user, query);
   }
 
@@ -51,6 +54,7 @@ export class MeetingsController {
   @ApiParam({ name: 'email', description: 'Email-ul participantului' })
   @Get('invitations/email/:email')
   findInvitationsByEmail(@Param('email') email: string, @Req() req: AuthenticatedRequest) {
+    // Expune invitatiile emailului curent. acum.
     return this.meetingsService.findInvitationsByEmail(email, req.user);
   }
 
@@ -58,6 +62,7 @@ export class MeetingsController {
   @ApiParam({ name: 'email', description: 'Email-ul participantului' })
   @Get('notifications/email/:email')
   findNotificationsByEmail(@Param('email') email: string, @Req() req: AuthenticatedRequest) {
+    // Expune notificarile emailului curent. acum.
     return this.meetingsService.findNotificationsByEmail(email, req.user);
   }
 
@@ -65,6 +70,7 @@ export class MeetingsController {
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @Get(':id/transcripts')
   findTranscriptVersions(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune istoricul transcripturilor meetingului. acum.
     return this.meetingsService.findTranscriptVersions(id, req.user);
   }
 
@@ -77,6 +83,7 @@ export class MeetingsController {
     @Param('transcriptId') transcriptId: string,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Expune restaurarea transcriptului ales. acum.
     return this.meetingsService.restoreTranscriptVersion(id, transcriptId, req.user);
   }
 
@@ -84,6 +91,7 @@ export class MeetingsController {
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune meetingul dupa id. acum.
     return this.meetingsService.findOne(id, req.user);
   }
 
@@ -95,6 +103,7 @@ export class MeetingsController {
     @Body() updateMeetingDto: UpdateMeetingDto,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Expune actualizarea meetingului curent. acum.
     return this.meetingsService.update(id, updateMeetingDto, req.user);
   }
 
@@ -102,6 +111,7 @@ export class MeetingsController {
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @Post(':id/import-meet-transcript')
   importMeetTranscript(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune importul transcriptului Meet. acum.
     return this.meetingsService.importMeetTranscript(id, req.user);
   }
 
@@ -113,6 +123,7 @@ export class MeetingsController {
     @Body() addMeetingInvitationsDto: AddMeetingInvitationsDto,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Expune trimiterea invitatiilor noi. acum.
     return this.meetingsService.addInvitations(id, addMeetingInvitationsDto, req.user);
   }
 
@@ -120,6 +131,7 @@ export class MeetingsController {
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @Get(':id/attendees')
   findAttendees(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune participantii meetingului curent. acum.
     return this.meetingsService.findAttendeesForMeeting(id, req.user);
   }
 
@@ -131,6 +143,7 @@ export class MeetingsController {
     @Body() addMeetingInvitationsDto: AddMeetingInvitationsDto,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Expune adaugarea participantilor noi. acum.
     return this.meetingsService.addInvitations(id, addMeetingInvitationsDto, req.user);
   }
 
@@ -144,6 +157,7 @@ export class MeetingsController {
     @Body() updateAttendeeDto: UpdateAttendeeDto,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Expune editarea participantului ales. acum.
     return this.meetingsService.updateAttendeeForMeeting(
       id,
       attendeeId,
@@ -156,6 +170,7 @@ export class MeetingsController {
   @ApiParam({ name: 'id', description: 'ID-ul sedintei' })
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune stergerea meetingului curent. acum.
     return this.meetingsService.remove(id, req.user);
   }
 
@@ -168,6 +183,7 @@ export class MeetingsController {
     @Param('attendeeId') attendeeId: string,
     @Req() req: AuthenticatedRequest,
   ) {
+    // Expune eliminarea participantului ales. acum.
     return this.meetingsService.removeAttendee(id, attendeeId, req.user);
   }
 }

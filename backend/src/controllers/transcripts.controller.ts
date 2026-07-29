@@ -17,6 +17,7 @@ export class TranscriptsController {
   @ApiParam({ name: 'id', description: 'ID-ul transcriptului' })
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    // Expune transcriptul cu acces. acum.
     return this.meetingsService.findTranscriptForMeetingUser(id, req.user);
   }
 }

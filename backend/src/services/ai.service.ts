@@ -55,15 +55,18 @@ export class AiService {
   ) {}
 
   getStatus() {
+    // Returneaza starea serviciului AI. acum.
     return { status: 'ok', service: 'ai-transcript', ollama: this.ollamaService.getInfo() };
   }
 
   async getResult(aiResultId: string, user: AuthenticatedUser) {
+    // Returneaza rezultatul AI complet. acum.
     const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
     return aiResult;
   }
 
   async getSummary(aiResultId: string, user: AuthenticatedUser) {
+    // Returneaza rezumatul separat AI. acum.
     const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
     return {
       aiResultId: aiResult.id,
@@ -74,6 +77,7 @@ export class AiService {
   }
 
   async getKeyPoints(aiResultId: string, user: AuthenticatedUser) {
+    // Returneaza punctele cheie separat. acum.
     const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
     return {
       aiResultId: aiResult.id,
@@ -83,6 +87,7 @@ export class AiService {
   }
 
   async getDecisions(aiResultId: string, user: AuthenticatedUser) {
+    // Returneaza deciziile extrase separat. acum.
     const { aiResult } = await this.getAccessibleAiResult(aiResultId, user);
     return {
       aiResultId: aiResult.id,
@@ -92,6 +97,7 @@ export class AiService {
   }
 
   async getActionItems(aiResultId: string, user: AuthenticatedUser) {
+    // Returneaza actiunile AI separate. acum.
     const { aiResult, meeting } = await this.getAccessibleAiResult(aiResultId, user);
     const actionItems = await this.actionItemsRepository.findByAiResultId(aiResult.id);
 
@@ -104,6 +110,7 @@ export class AiService {
   }
 
   async listActionItems(user: AuthenticatedUser, filters?: { status?: ActionItemStatus }) {
+    // Listeaza actiunile accesibile utilizatorului. acum.
     const meetings = await this.findAccessibleMeetings(user);
     const meetingsByAiResultId = new Map(
       meetings
@@ -130,6 +137,7 @@ export class AiService {
     dto: UpdateActionItemDto,
     user: AuthenticatedUser,
   ): Promise<ActionItem> {
+    // Actualizeaza actiunea din meeting. acum.
     const actionItem = await this.actionItemsRepository.findOne(id);
     if (!actionItem) {
       throw new NotFoundException(`Action item #${id} not found`);
@@ -151,6 +159,7 @@ export class AiService {
   }
 
   async removeActionItem(id: string, user: AuthenticatedUser): Promise<ActionItem> {
+    // Sterge actiunea din AI. acum.
     const actionItem = await this.actionItemsRepository.findOne(id);
     if (!actionItem) {
       throw new NotFoundException(`Action item #${id} not found`);
@@ -173,6 +182,7 @@ export class AiService {
     actionItem: ActionItem,
     user: AuthenticatedUser,
   ): Promise<{ aiResult: AIResult; meeting: Meeting }> {
+    // Verifica accesul la actiune. acum.
     if (!actionItem.aiResultId) {
       throw new NotFoundException('Action item-ul nu are un meeting asociat.');
     }
@@ -195,6 +205,7 @@ export class AiService {
   }
 
   async processTranscript(processTranscriptDto: ProcessTranscriptDto, user?: AuthenticatedUser) {
+    // Proceseaza transcriptul prin AI. acum.
     const { meetingId, language = 'ro' } = processTranscriptDto;
     const meeting = await this.meetingsRepository.findOne(meetingId);
     if (!meeting) {
@@ -268,6 +279,7 @@ export class AiService {
   }
 
   private async resolveTranscript(processTranscriptDto: ProcessTranscriptDto) {
+    // Alege transcriptul pentru procesare. acum.
     if (processTranscriptDto.transcript?.trim()) {
       return this.transcriptsRepository.create({
         meetingId: processTranscriptDto.meetingId,
@@ -290,6 +302,7 @@ export class AiService {
   }
 
   private buildPrompt(transcript: string, language: string): string {
+    // Construieste instructiunile pentru AI. acum.
     if (language.toLowerCase().startsWith('en')) {
       return `
 You are an assistant that extracts structured meeting results.
@@ -384,22 +397,26 @@ ${transcript}
   }
 
   private normalizeFollowUpNotes(notes?: string): string | undefined {
+    // Curata notitele de follow-up. acum.
     if (!notes || notes.trim().toLowerCase() === 'null') return undefined;
     return notes.trim();
   }
 
   private parseDueDate(dueDate?: string): Date | undefined {
+    // Converteste deadlineul in data. acum.
     if (!dueDate || dueDate.toLowerCase() === 'null') return undefined;
     const date = new Date(dueDate);
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
   private clampConfidence(confidenceScore?: number): number | undefined {
+    // Limiteaza scorul intre zero unu.
     if (confidenceScore === undefined) return undefined;
     return Math.min(1, Math.max(0, confidenceScore));
   }
 
   private async getAccessibleAiResult(aiResultId: string, user: AuthenticatedUser) {
+    // Gaseste rezultatul permis utilizatorului. acum.
     const aiResult = await this.aiResultsRepository.findOne(aiResultId);
     if (!aiResult) {
       throw new NotFoundException(`AI result #${aiResultId} not found`);
@@ -415,6 +432,7 @@ ${transcript}
   }
 
   private async findAccessibleMeetings(user: AuthenticatedUser): Promise<Meeting[]> {
+    // Gaseste meetingurile permise utilizatorului. acum.
     const invitations = await this.invitationsRepository.findByParticipantEmail(user.email);
     return this.meetingsRepository.findAccessible(
       user.userId,
@@ -423,6 +441,7 @@ ${transcript}
   }
 
   private withMeeting(actionItem: ActionItem, meeting: Meeting): ActionItemListItem {
+    // Adauga contextul meetingului actiunii. acum.
     return {
       ...actionItem,
       meetingId: meeting.id,
@@ -434,6 +453,7 @@ ${transcript}
     meeting: { id: string; ownerId: string },
     user: AuthenticatedUser,
   ): Promise<void> {
+    // Permite creatorului sau invitatului. acum.
     if (meeting.ownerId?.toString() === user.userId) {
       return;
     }

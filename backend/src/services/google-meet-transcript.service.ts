@@ -51,6 +51,7 @@ export class GoogleMeetTranscriptService {
     meetLink: string,
     refreshToken: string,
   ): Promise<ImportedMeetTranscript> {
+    // Importa transcriptul Google Meet. acum.
     const meetingCode = this.extractMeetingCode(meetLink);
     if (!meetingCode) {
       throw new NotFoundException('Nu am putut identifica meeting code din Google Meet link.');
@@ -76,11 +77,13 @@ export class GoogleMeetTranscriptService {
   }
 
   private extractMeetingCode(meetLink: string): string | undefined {
+    // Extrage codul din link. acum.
     const match = meetLink.match(/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);
     return match?.[1].toLowerCase();
   }
 
   private async getAccessToken(refreshToken: string): Promise<string> {
+    // Cere access token Google. acum.
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = process.env.GOOGLE_CALLBACK_URL;
@@ -101,6 +104,7 @@ export class GoogleMeetTranscriptService {
   }
 
   private async findConferenceRecord(accessToken: string, meetingCode: string) {
+    // Gaseste conferinta dupa cod. acum.
     const response = await this.get<ConferenceRecordsResponse>('/conferenceRecords', accessToken, {
       pageSize: 1,
       filter: `space.meeting_code = "${meetingCode}"`,
@@ -120,6 +124,7 @@ export class GoogleMeetTranscriptService {
     accessToken: string,
     conferenceRecordName: string,
   ): Promise<string> {
+    // Gaseste ultimul transcript disponibil. acum.
     const transcripts = await this.listAllPages<TranscriptsResponse, { name: string }>(
       `/${conferenceRecordName}/transcripts`,
       accessToken,
@@ -140,6 +145,7 @@ export class GoogleMeetTranscriptService {
     accessToken: string,
     transcriptName: string,
   ): Promise<TranscriptEntry[]> {
+    // Listeaza intrarile transcriptului ales. acum.
     return this.listAllPages<TranscriptEntriesResponse, TranscriptEntry>(
       `/${transcriptName}/entries`,
       accessToken,
@@ -152,6 +158,7 @@ export class GoogleMeetTranscriptService {
     accessToken: string,
     collectionKey: keyof TResponse,
   ): Promise<TItem[]> {
+    // Parcurge toate paginile API. acum.
     const items: TItem[] = [];
     let pageToken: string | undefined;
 
@@ -171,6 +178,7 @@ export class GoogleMeetTranscriptService {
   }
 
   private formatTranscript(entries: TranscriptEntry[]): string {
+    // Formateaza transcriptul pentru aplicatie. acum.
     return entries
       .filter((entry) => entry.text?.trim())
       .map((entry) => {
@@ -191,6 +199,7 @@ export class GoogleMeetTranscriptService {
     accessToken: string,
     params?: Record<string, string | number | undefined>,
   ): Promise<T> {
+    // Executa cererea Google Meet. acum.
     try {
       const response = await axios.get<T>(`${this.baseUrl}${path}`, {
         params,

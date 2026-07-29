@@ -8,6 +8,7 @@ interface OllamaGenerateResponse {
 @Injectable()
 export class OllamaService {
   getInfo() {
+    // Returneaza configuratia Ollama curenta. acum.
     return {
       name: 'ollama',
       url: this.baseUrl,
@@ -19,6 +20,7 @@ export class OllamaService {
   private readonly model = process.env.OLLAMA_MODEL ?? 'llama3.2:latest';
 
   async generateJson<T>(prompt: string): Promise<T> {
+    // Cere raspuns JSON de Ollama.
     const { data } = await axios.post<OllamaGenerateResponse>(`${this.baseUrl}/api/generate`, {
       model: this.model,
       prompt,

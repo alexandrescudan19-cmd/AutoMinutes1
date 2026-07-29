@@ -20,6 +20,7 @@ export class AiResultsRepository {
   ) {}
 
   async create(data: CreateAIResultData): Promise<AIResult> {
+    // Creeaza rezultatul AI in baza.
     const aiResult = await this.aiResultModel.create({
       keyPoints: data.keyPoints ?? [],
       decisions: data.decisions ?? [],
@@ -31,17 +32,19 @@ export class AiResultsRepository {
   }
 
   async findAll(): Promise<AIResult[]> {
+    // Listeaza toate rezultatele AI. acum.
     const aiResults = await this.aiResultModel.find().exec();
     return aiResults.map((aiResult) => this.toModel(aiResult));
   }
 
   async findOne(id: string): Promise<AIResult | undefined> {
+    // Gaseste rezultatul AI dupa id.
     const aiResult = await this.aiResultModel.findById(id).exec();
     return aiResult ? this.toModel(aiResult) : undefined;
   }
 
   async findLatestByTranscriptId(transcriptId: string): Promise<AIResult | undefined> {
-    // Ia ultima analiza AI.
+    // Ia ultima analiza AI disponibila.
     const aiResult = await this.aiResultModel
       .findOne({ transcriptId })
       .sort({ generatedAt: -1, createdAt: -1 })
@@ -50,6 +53,7 @@ export class AiResultsRepository {
   }
 
   async update(id: string, data: Partial<AIResult>): Promise<AIResult | undefined> {
+    // Actualizeaza rezultatul AI dupa id.
     const rest = { ...data };
     delete rest.id;
     const aiResult = await this.aiResultModel
@@ -59,11 +63,13 @@ export class AiResultsRepository {
   }
 
   async remove(id: string): Promise<AIResult | undefined> {
+    // Sterge rezultatul AI dupa id.
     const aiResult = await this.aiResultModel.findByIdAndDelete(id).exec();
     return aiResult ? this.toModel(aiResult) : undefined;
   }
 
   private toModel(document: AIResultDocument): AIResult {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       meetingId: document.meetingId,
@@ -81,6 +87,7 @@ export class AiResultsRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

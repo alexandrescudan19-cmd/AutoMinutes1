@@ -17,6 +17,7 @@ export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
   async getMe(userId: string): Promise<SanitizedUser> {
+    // Returneaza profilul utilizatorului curent. acum.
     const user = await this.usersRepository.findOne(userId);
     if (!user) {
       throw new NotFoundException('Utilizatorul nu a fost gasit.');
@@ -25,6 +26,7 @@ export class UsersService {
   }
 
   async updateMe(userId: string, dto: UpdateUserDto): Promise<SanitizedUser> {
+    // Actualizeaza setarile utilizatorului curent. acum.
     const user = await this.usersRepository.update(userId, {
       themePreference: dto.themePreference,
     });
@@ -35,6 +37,7 @@ export class UsersService {
   }
 
   private sanitize(user: User): SanitizedUser {
+    // Elimina campurile sensibile din raspuns.
     const {
       passwordHash,
       verificationToken,

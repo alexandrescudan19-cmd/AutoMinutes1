@@ -20,6 +20,7 @@ export class MeetingsRepository {
   constructor(@InjectModel(Meeting.name) private readonly meetingModel: Model<MeetingDocument>) {}
 
   async create(data: CreateMeetingData): Promise<Meeting> {
+    // Creeaza documentul meetingului nou. acum.
     const meeting = await this.meetingModel.create({
       ...data,
       status: data.status ?? MeetingStatus.Upcoming,
@@ -31,6 +32,7 @@ export class MeetingsRepository {
   }
 
   async findAll(): Promise<Meeting[]> {
+    // Listeaza toate meetingurile sortate. acum.
     const meetings = await this.meetingModel
       .find()
       .sort({ startDateTime: -1, createdAt: -1 })
@@ -39,6 +41,7 @@ export class MeetingsRepository {
   }
 
   async findAccessible(ownerId: string, meetingIds: string[]): Promise<Meeting[]> {
+    // Gaseste meetingurile accesibile userului. acum.
     const meetings = await this.meetingModel
       .find({
         $or: [{ ownerId }, { _id: { $in: meetingIds } }],
@@ -49,6 +52,7 @@ export class MeetingsRepository {
   }
 
   async completeFinishedMeetings(now = new Date()): Promise<void> {
+    // Marcheaza meetingurile terminate completate. acum.
     await this.meetingModel
       .updateMany(
         {
@@ -61,6 +65,7 @@ export class MeetingsRepository {
   }
 
   async findFinishedWithoutTranscript(now = new Date(), limit = 10): Promise<Meeting[]> {
+    // Gaseste meetinguri terminate fara transcript.
     const meetings = await this.meetingModel
       .find({
         endDateTime: { $lte: now },
@@ -75,11 +80,13 @@ export class MeetingsRepository {
   }
 
   async findOne(id: string): Promise<Meeting | undefined> {
+    // Gaseste meetingul dupa id. acum.
     const meeting = await this.meetingModel.findById(id).exec();
     return meeting ? this.toModel(meeting) : undefined;
   }
 
   async update(id: string, data: Partial<Meeting>): Promise<Meeting | undefined> {
+    // Actualizeaza meetingul dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const update = this.withoutUndefined(rest);
@@ -90,11 +97,13 @@ export class MeetingsRepository {
   }
 
   async remove(id: string): Promise<Meeting | undefined> {
+    // Sterge meetingul dupa id. acum.
     const meeting = await this.meetingModel.findByIdAndDelete(id).exec();
     return meeting ? this.toModel(meeting) : undefined;
   }
 
   private toModel(document: MeetingDocument): Meeting {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       ownerId: document.ownerId,
@@ -117,6 +126,7 @@ export class MeetingsRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

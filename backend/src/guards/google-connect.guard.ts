@@ -19,6 +19,7 @@ export class GoogleConnectGuard extends AuthGuard('google') {
   }
 
   async getAuthenticateOptions(context: ExecutionContext) {
+    // Pregateste conectarea Google protejata. acum.
     const request = context.switchToHttp().getRequest<Request>();
     const token = request.query.token;
 

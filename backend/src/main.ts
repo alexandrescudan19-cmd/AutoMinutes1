@@ -8,17 +8,22 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 
 if (process.env.MONGODB_URI?.startsWith('mongodb+srv://')) {
+  // Configureaza DNS pentru Atlas. acum.
   dns.setServers((process.env.DNS_SERVERS ?? '1.1.1.1,8.8.8.8').split(','));
 }
 
 async function bootstrap() {
+  // Porneste aplicatia NestJS backend. acum.
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+
+  // Permite cereri din frontend. acum.
   app.enableCors({
     origin: frontendUrl.split(',').map((origin) => origin.trim()),
   });
   app.useBodyParser('text');
 
+  // Configureaza documentatia Swagger API. acum.
   const swaggerConfig = new DocumentBuilder()
     .setTitle('AutoMinutes API')
     .setDescription(

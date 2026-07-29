@@ -55,9 +55,7 @@ export type RestoreTranscriptVersionResult = {
   aiResultId?: string;
 };
 
-// Participants only ever reach Google Calendar / Invitation / Notification records
-// after normalizeParticipants() has filtered out anyone without an email - only they
-// can actually be invited. This type reflects that guarantee to the rest of the class.
+// Tip pentru participantii invitabili folositi.
 type NormalizedParticipant = {
   name: string;
   email: string;
@@ -80,6 +78,7 @@ export class MeetingsService {
   ) {}
 
   async create(createMeetingDto: CreateMeetingDto, user?: AuthenticatedUser): Promise<Meeting> {
+    // Creeaza meetingul si invitatiile asociate.
     const startDateTime = new Date(createMeetingDto.startDateTime);
     const endDateTime = new Date(createMeetingDto.endDateTime);
     const ownerId = user?.userId ?? createMeetingDto.ownerId;
@@ -143,8 +142,7 @@ export class MeetingsService {
       ),
     );
 
-    // The creator is always the organizer - added as an attendee so they show up
-    // in the attendees list, pinned first in the UI regardless of array order.
+    // Adauga creatorul ca organizator automat.
     const ownerUser = await this.usersRepository.findOne(ownerId);
     const organizerAttendee = ownerUser
       ? await this.attendeesRepository.create({
@@ -204,11 +202,13 @@ export class MeetingsService {
   }
 
   async findAll(user?: AuthenticatedUser): Promise<Meeting[]> {
+    // Listeaza meetingurile permise utilizatorului. acum.
     await this.meetingsRepository.completeFinishedMeetings();
     return this.findAccessibleMeetings(user);
   }
 
   async findHistory(user: AuthenticatedUser, query: MeetingHistoryQueryDto) {
+    // Pregateste history filtrat si paginat.
     await this.meetingsRepository.completeFinishedMeetings();
 
     const page = this.toPositiveInt(query.page, 1);
@@ -227,7 +227,7 @@ export class MeetingsService {
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
 
-    // Calculeaza statisticile complete filtrate.
+    // Calculeaza statisticile complete filtrate acum.
     const annotatedMeetings = await this.withActionItemsCount(sortedMeetings);
     const items = annotatedMeetings.slice((safePage - 1) * pageSize, safePage * pageSize);
 
@@ -254,6 +254,7 @@ export class MeetingsService {
   }
 
   async findOne(id: string, user?: AuthenticatedUser): Promise<Meeting> {
+    // Returneaza meetingul accesibil cerut. acum.
     await this.meetingsRepository.completeFinishedMeetings();
     const meeting = await this.meetingsRepository.findOne(id);
     if (!meeting) throw new NotFoundException(`Meeting #${id} not found`);
@@ -268,6 +269,7 @@ export class MeetingsService {
     updateMeetingDto: UpdateMeetingDto,
     user?: AuthenticatedUser,
   ): Promise<Meeting> {
+    // Actualizeaza meetingul detinut de utilizator.
     if (user) {
       await this.assertCanManageMeeting(id, user);
     }
@@ -286,6 +288,7 @@ export class MeetingsService {
   }
 
   async remove(id: string, user?: AuthenticatedUser): Promise<Meeting> {
+    // Sterge meetingul detinut de utilizator.
     if (user) {
       await this.assertCanManageMeeting(id, user);
     }
@@ -296,6 +299,7 @@ export class MeetingsService {
   }
 
   async importMeetTranscript(id: string, user?: AuthenticatedUser) {
+    // Importa transcriptul pentru meeting. acum.
     await this.meetingsRepository.completeFinishedMeetings();
     const meeting = await this.findOne(id, user);
     if (user) {
@@ -309,6 +313,7 @@ export class MeetingsService {
   }
 
   async importMissingFinishedTranscripts(limit = 10) {
+    // Importa transcripturi finalizate lipsa. acum.
     await this.meetingsRepository.completeFinishedMeetings();
     const meetings = await this.meetingsRepository.findFinishedWithoutTranscript(new Date(), limit);
     const results: Array<{ meetingId: string; imported: boolean; error?: string }> = [];
@@ -327,6 +332,7 @@ export class MeetingsService {
   }
 
   private async importTranscriptForMeeting(meeting: Meeting) {
+    // Salveaza transcriptul importat automat. acum.
     if (!meeting.googleMeetLink) {
       throw new NotFoundException('Meeting-ul nu are Google Meet link salvat.');
     }
@@ -364,6 +370,7 @@ export class MeetingsService {
     addMeetingInvitationsDto: AddMeetingInvitationsDto,
     user: AuthenticatedUser,
   ) {
+    // Adauga invitatii noi meetingului. acum.
     await this.meetingsRepository.completeFinishedMeetings();
     await this.assertCanManageMeeting(id, user);
 
@@ -386,8 +393,7 @@ export class MeetingsService {
       existingInvitations.map((invitation) => invitation.participantEmail.toLowerCase().trim()),
     );
 
-    // Attendees without an email can't be invited (no calendar/email to send to), so
-    // the duplicate-invitation check only applies to those who have one.
+    // Evita invitatii duplicate prin email.
     const newParticipants = submittedParticipants.filter(
       (participant) => !participant.email || !existingEmails.has(participant.email),
     );
@@ -400,8 +406,7 @@ export class MeetingsService {
       (participant): participant is typeof participant & { email: string } => !!participant.email,
     );
 
-    // A finished/cancelled meeting can't have new calendar/email invitations sent out,
-    // but attendees without an email (just kept for the record) are still fine to add.
+    // Blocheaza invitatii dupa finalizarea meetingului.
     if (
       invitableParticipants.length > 0 &&
       [MeetingStatus.Completed, MeetingStatus.Cancelled].includes(meeting.status)
@@ -474,6 +479,7 @@ export class MeetingsService {
   }
 
   async findAttendeesForMeeting(id: string, user: AuthenticatedUser) {
+    // Listeaza participantii meetingului accesibil. acum.
     const meeting = await this.findOne(id, user);
 
     return Promise.all(
@@ -490,6 +496,7 @@ export class MeetingsService {
     updateAttendeeDto: UpdateAttendeeDto,
     user: AuthenticatedUser,
   ) {
+    // Actualizeaza participantul unui meeting. acum.
     const meeting = await this.findOne(meetingId, user);
     await this.assertCanManageMeeting(meetingId, user);
 
@@ -516,6 +523,7 @@ export class MeetingsService {
     attendeeId: string,
     user: AuthenticatedUser,
   ): Promise<Meeting> {
+    // Elimina participantul din meeting. acum.
     await this.assertCanManageMeeting(meetingId, user);
 
     const meeting = await this.meetingsRepository.findOne(meetingId);
@@ -533,16 +541,19 @@ export class MeetingsService {
   }
 
   findInvitationsByEmail(email: string, user?: AuthenticatedUser): Promise<Invitation[]> {
+    // Listeaza invitatiile emailului curent. acum.
     this.assertOwnEmail(email, user);
     return this.invitationsRepository.findByParticipantEmail(user?.email ?? email);
   }
 
   findNotificationsByEmail(email: string, user?: AuthenticatedUser): Promise<Notification[]> {
+    // Listeaza notificarile emailului curent. acum.
     this.assertOwnEmail(email, user);
     return this.notificationsRepository.findByRecipientEmail(user?.email ?? email);
   }
 
   async findTranscriptForMeetingUser(transcriptId: string, user: AuthenticatedUser) {
+    // Returneaza transcriptul cu acces. acum.
     const transcript = await this.transcriptsRepository.findOne(transcriptId);
     if (!transcript) {
       throw new NotFoundException(`Transcript #${transcriptId} not found`);
@@ -553,10 +564,11 @@ export class MeetingsService {
   }
 
   async findTranscriptVersions(meetingId: string, user: AuthenticatedUser) {
+    // Listeaza versiunile transcriptului meetingului. acum.
     const meeting = await this.findOne(meetingId, user);
     const transcripts = await this.transcriptsRepository.findByMeetingId(meetingId);
 
-    // Marcheaza versiunea activa curenta.
+    // Marcheaza versiunea activa curenta acum.
     return transcripts.map((transcript, index): TranscriptVersionItem => ({
       ...transcript,
       version: index + 1,
@@ -569,6 +581,7 @@ export class MeetingsService {
     transcriptId: string,
     user: AuthenticatedUser,
   ): Promise<RestoreTranscriptVersionResult> {
+    // Restaureaza versiunea de transcript. acum.
     const meeting = await this.findOne(meetingId, user);
     const transcript = await this.transcriptsRepository.findOne(transcriptId);
     if (!transcript || transcript.meetingId.toString() !== meetingId) {
@@ -577,14 +590,14 @@ export class MeetingsService {
 
     const aiResult = await this.aiResultsRepository.findLatestByTranscriptId(transcriptId);
 
-    // Leaga AI-ul de transcript.
+    // Leaga rezultatul AI de transcript.
     const updatedMeeting = await this.meetingsRepository.update(meetingId, {
       transcriptId,
       aiResultId: aiResult?.id ?? '',
       aiStatus: aiResult ? AiStatus.Completed : AiStatus.Idle,
     });
 
-    // Recalculeaza numarul versiunii restaurate.
+    // Recalculeaza numarul versiunii restaurate acum.
     const versions = await this.transcriptsRepository.findByMeetingId(meetingId);
     const restoredIndex = versions.findIndex((version) => version.id === transcriptId);
 
@@ -602,6 +615,7 @@ export class MeetingsService {
   private normalizeParticipants(
     participants: CreateMeetingParticipantDto[] = [],
   ): NormalizedParticipant[] {
+    // Normalizeaza participantii cu email valid.
     return participants
       .filter(
         (participant): participant is CreateMeetingParticipantDto & { email: string } =>
@@ -615,6 +629,7 @@ export class MeetingsService {
   }
 
   private buildInvitationMessage(meeting: Meeting, googleMeetLink?: string): string {
+    // Compune mesajul invitatiei interne. acum.
     const start = new Date(meeting.startDateTime).toLocaleString('ro-RO', {
       dateStyle: 'medium',
       timeStyle: 'short',
@@ -626,6 +641,7 @@ export class MeetingsService {
   }
 
   private async findAccessibleMeetings(user?: AuthenticatedUser): Promise<Meeting[]> {
+    // Gaseste meetingurile permise utilizatorului. acum.
     if (!user) {
       return this.meetingsRepository.findAll();
     }
@@ -641,6 +657,7 @@ export class MeetingsService {
     meetings: Meeting[],
     filters: { search?: string; status?: MeetingStatus; aiStatus?: AiStatus },
   ) {
+    // Filtreaza meetingurile dupa criterii. acum.
     return meetings.filter((meeting) => {
       if (filters.status && meeting.status !== filters.status) {
         return false;
@@ -671,6 +688,7 @@ export class MeetingsService {
   }
 
   private sortMeetings(meetings: Meeting[], sort: MeetingHistorySort) {
+    // Sorteaza meetingurile pentru history. acum.
     const statusOrder: Record<string, number> = {
       [MeetingStatus.InProgress]: 0,
       [MeetingStatus.Upcoming]: 1,
@@ -695,6 +713,7 @@ export class MeetingsService {
   }
 
   private async withActionItemsCount(meetings: Meeting[]): Promise<MeetingHistoryItem[]> {
+    // Adauga numarul de actiuni. acum.
     return Promise.all(
       meetings.map(async (meeting) => {
         if (!meeting.aiResultId) {
@@ -712,11 +731,13 @@ export class MeetingsService {
   }
 
   private toPositiveInt(raw: string | undefined, fallback: number) {
+    // Parseaza numere pozitive sigure. acum.
     const value = Number(raw);
     return Number.isInteger(value) && value > 0 ? value : fallback;
   }
 
   private async assertCanAccessMeeting(meeting: Meeting, user: AuthenticatedUser): Promise<void> {
+    // Permite creatorului sau invitatului. acum.
     if (meeting.ownerId?.toString() === user.userId) {
       return;
     }
@@ -731,6 +752,7 @@ export class MeetingsService {
   }
 
   private async assertCanManageMeeting(id: string, user: AuthenticatedUser): Promise<void> {
+    // Permite doar creatorului modificari. acum.
     const meeting = await this.meetingsRepository.findOne(id);
     if (!meeting) {
       throw new NotFoundException(`Meeting #${id} not found`);
@@ -741,6 +763,7 @@ export class MeetingsService {
   }
 
   private async getOwnerRefreshToken(ownerId: string): Promise<string> {
+    // Decripteaza tokenul Google salvat. acum.
     const owner = ownerId ? await this.usersRepository.findOne(ownerId) : undefined;
     if (!owner?.googleRefreshTokenEncrypted) {
       throw new BadRequestException(
@@ -752,6 +775,7 @@ export class MeetingsService {
   }
 
   private assertOwnEmail(email: string, user?: AuthenticatedUser): void {
+    // Blocheaza citirea altui email. acum.
     if (!user) {
       return;
     }

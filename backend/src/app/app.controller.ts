@@ -7,6 +7,7 @@ export class AppController {
 
   @Get()
   getHello(): string {
+    // Expune mesajul de sanatate. acum.
     return this.appService.getHello();
   }
 }

@@ -9,10 +9,12 @@ export class AttendeesService {
   constructor(private readonly attendeesRepository: AttendeesRepository) {}
 
   findAll(): Promise<Attendee[]> {
+    // Listeaza participantii salvati global. acum.
     return this.attendeesRepository.findAll();
   }
 
   async findOne(id: string): Promise<Attendee> {
+    // Gaseste participantul dupa id. acum.
     const attendee = await this.attendeesRepository.findOne(id);
     if (!attendee) {
       throw new NotFoundException(`Attendee #${id} not found`);
@@ -21,10 +23,12 @@ export class AttendeesService {
   }
 
   create(dto: CreateAttendeeDto): Promise<Attendee> {
+    // Creeaza participant salvat global. acum.
     return this.attendeesRepository.create(dto);
   }
 
   async update(id: string, dto: UpdateAttendeeDto): Promise<Attendee> {
+    // Actualizeaza participantul salvat global. acum.
     const attendee = await this.attendeesRepository.update(id, dto);
     if (!attendee) {
       throw new NotFoundException(`Attendee #${id} not found`);
@@ -33,6 +37,7 @@ export class AttendeesService {
   }
 
   async remove(id: string): Promise<Attendee> {
+    // Sterge participantul salvat global. acum.
     const attendee = await this.attendeesRepository.remove(id);
     if (!attendee) {
       throw new NotFoundException(`Attendee #${id} not found`);

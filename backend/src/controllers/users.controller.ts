@@ -18,12 +18,14 @@ export class UsersController {
   @ApiOperation({ summary: 'Returneaza contul utilizatorului curent' })
   @Get('me')
   getMe(@Req() req: AuthenticatedRequest) {
+    // Expune profilul userului curent. acum.
     return this.usersService.getMe(req.user.userId);
   }
 
   @ApiOperation({ summary: 'Actualizeaza preferintele contului curent (ex: tema)' })
   @Patch('me')
   updateMe(@Body() updateUserDto: UpdateUserDto, @Req() req: AuthenticatedRequest) {
+    // Actualizeaza profilul userului curent. acum.
     return this.usersService.updateMe(req.user.userId, updateUserDto);
   }
 }

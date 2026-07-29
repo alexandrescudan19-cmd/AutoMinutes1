@@ -48,38 +48,45 @@ export class AuthController {
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
+    // Porneste crearea unui cont. acum.
     return this.authService.register(dto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
+    // Porneste autentificarea cu parola. acum.
     return this.authService.login(dto);
   }
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   forgotPassword(@Body() dto: ForgotPasswordDto) {
+    // Cere email pentru resetare. acum.
     return this.authService.forgotPassword(dto);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   resetPassword(@Body() dto: ResetPasswordDto) {
+    // Aplica parola noua primita. acum.
     return this.authService.resetPassword(dto);
   }
 
   @Get('verify')
   verify(@Query('token') token: string) {
+    // Verifica emailul prin token. acum.
     return this.authService.verifyEmail(token);
   }
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
+  // Porneste loginul prin Google. acum.
   googleLogin() {}
 
   @Get('google/connect')
   @UseGuards(GoogleConnectGuard)
+  // Porneste conectarea Google Calendar. acum.
   googleConnect() {}
 
   @Get('google/callback')
@@ -90,6 +97,7 @@ export class AuthController {
     @Query('state') state: string | undefined,
     @Res() res: Response,
   ) {
+    // Gestioneaza raspunsul OAuth Google. acum.
     const frontendUrl = (process.env.FRONTEND_URL ?? '').replace(/\/+$/, '');
 
     if (state) {
@@ -113,6 +121,7 @@ export class AuthController {
   @Get('google/status')
   @UseGuards(AuthGuard('jwt'))
   googleStatus(@Req() req: AuthenticatedRequest) {
+    // Returneaza statusul Google conectat. acum.
     return this.authService.getGoogleConnectionStatus(req.user.userId);
   }
 
@@ -120,6 +129,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt'))
   googleDisconnect(@Req() req: AuthenticatedRequest) {
+    // Deconecteaza contul Google curent. acum.
     return this.authService.disconnectGoogleAccount(req.user.userId);
   }
 }

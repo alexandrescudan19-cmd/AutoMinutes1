@@ -14,6 +14,7 @@ export class TranscriptsRepository {
   ) {}
 
   async create(data: CreateTranscriptData): Promise<Transcript> {
+    // Creeaza transcriptul in baza. acum.
     const transcript = await this.transcriptModel.create({
       uploadedAt: data.uploadedAt ?? new Date().toISOString(),
       ...data,
@@ -22,17 +23,19 @@ export class TranscriptsRepository {
   }
 
   async findAll(): Promise<Transcript[]> {
+    // Listeaza toate transcripturile salvate. acum.
     const transcripts = await this.transcriptModel.find().exec();
     return transcripts.map((transcript) => this.toModel(transcript));
   }
 
   async findOne(id: string): Promise<Transcript | undefined> {
+    // Gaseste transcriptul dupa id. acum.
     const transcript = await this.transcriptModel.findById(id).exec();
     return transcript ? this.toModel(transcript) : undefined;
   }
 
   async findByMeetingId(meetingId: string): Promise<Transcript[]> {
-    // Pastreaza istoricul cronologic.
+    // Pastreaza istoricul cronologic complet. acum.
     const transcripts = await this.transcriptModel
       .find({ meetingId })
       .sort({ uploadedAt: 1, createdAt: 1 })
@@ -41,6 +44,7 @@ export class TranscriptsRepository {
   }
 
   async update(id: string, data: Partial<Transcript>): Promise<Transcript | undefined> {
+    // Actualizeaza transcriptul dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const transcript = await this.transcriptModel
@@ -50,11 +54,13 @@ export class TranscriptsRepository {
   }
 
   async remove(id: string): Promise<Transcript | undefined> {
+    // Sterge transcriptul dupa id. acum.
     const transcript = await this.transcriptModel.findByIdAndDelete(id).exec();
     return transcript ? this.toModel(transcript) : undefined;
   }
 
   private toModel(document: TranscriptDocument): Transcript {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       meetingId: document.meetingId,
@@ -67,6 +73,7 @@ export class TranscriptsRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

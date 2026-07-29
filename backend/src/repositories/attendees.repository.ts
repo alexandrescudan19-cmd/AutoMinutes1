@@ -16,6 +16,7 @@ export class AttendeesRepository {
   ) {}
 
   async create(data: CreateAttendeeData): Promise<Attendee> {
+    // Creeaza participantul in baza. acum.
     const attendee = await this.attendeeModel.create({
       ...data,
       attendanceStatus: data.attendanceStatus ?? AttendanceStatus.Invited,
@@ -24,16 +25,19 @@ export class AttendeesRepository {
   }
 
   async findAll(): Promise<Attendee[]> {
+    // Listeaza participantii din baza. acum.
     const attendees = await this.attendeeModel.find().exec();
     return attendees.map((attendee) => this.toModel(attendee));
   }
 
   async findOne(id: string): Promise<Attendee | undefined> {
+    // Gaseste participantul dupa id. acum.
     const attendee = await this.attendeeModel.findById(id).exec();
     return attendee ? this.toModel(attendee) : undefined;
   }
 
   async update(id: string, data: Partial<Attendee>): Promise<Attendee | undefined> {
+    // Actualizeaza participantul dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const update = this.withoutUndefined(rest);
@@ -44,11 +48,13 @@ export class AttendeesRepository {
   }
 
   async remove(id: string): Promise<Attendee | undefined> {
+    // Sterge participantul dupa id. acum.
     const attendee = await this.attendeeModel.findByIdAndDelete(id).exec();
     return attendee ? this.toModel(attendee) : undefined;
   }
 
   private toModel(document: AttendeeDocument): Attendee {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       name: document.name,
@@ -61,6 +67,7 @@ export class AttendeesRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;

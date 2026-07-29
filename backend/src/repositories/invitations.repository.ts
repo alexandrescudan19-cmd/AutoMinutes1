@@ -19,6 +19,7 @@ export class InvitationsRepository {
   ) {}
 
   async create(data: CreateInvitationData): Promise<Invitation> {
+    // Creeaza invitatia in baza. acum.
     const invitation = await this.invitationModel.create({
       invitationStatus: data.invitationStatus ?? AttendanceStatus.Invited,
       sentAt: data.sentAt ?? new Date().toISOString(),
@@ -28,11 +29,13 @@ export class InvitationsRepository {
   }
 
   async findAll(): Promise<Invitation[]> {
+    // Listeaza toate invitatiile salvate. acum.
     const invitations = await this.invitationModel.find().exec();
     return invitations.map((invitation) => this.toModel(invitation));
   }
 
   async findByParticipantEmail(email: string): Promise<Invitation[]> {
+    // Gaseste invitatiile dupa email. acum.
     const invitations = await this.invitationModel
       .find({ participantEmail: email.toLowerCase().trim() })
       .sort({ sentAt: -1 })
@@ -41,16 +44,19 @@ export class InvitationsRepository {
   }
 
   async findByMeetingId(meetingId: string): Promise<Invitation[]> {
+    // Gaseste invitatiile meetingului curent. acum.
     const invitations = await this.invitationModel.find({ meetingId }).sort({ sentAt: -1 }).exec();
     return invitations.map((invitation) => this.toModel(invitation));
   }
 
   async findOne(id: string): Promise<Invitation | undefined> {
+    // Gaseste invitatia dupa id. acum.
     const invitation = await this.invitationModel.findById(id).exec();
     return invitation ? this.toModel(invitation) : undefined;
   }
 
   async update(id: string, data: Partial<Invitation>): Promise<Invitation | undefined> {
+    // Actualizeaza invitatia dupa id. acum.
     const rest = { ...data };
     delete rest.id;
     const invitation = await this.invitationModel
@@ -60,11 +66,13 @@ export class InvitationsRepository {
   }
 
   async remove(id: string): Promise<Invitation | undefined> {
+    // Sterge invitatia dupa id. acum.
     const invitation = await this.invitationModel.findByIdAndDelete(id).exec();
     return invitation ? this.toModel(invitation) : undefined;
   }
 
   private toModel(document: InvitationDocument): Invitation {
+    // Converteste documentul in model. acum.
     return {
       id: document._id.toString(),
       meetingId: document.meetingId,
@@ -77,6 +85,7 @@ export class InvitationsRepository {
   }
 
   private withoutUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+    // Elimina valorile undefined trimise. acum.
     return Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined),
     ) as Partial<T>;
