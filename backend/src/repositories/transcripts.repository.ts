@@ -31,6 +31,15 @@ export class TranscriptsRepository {
     return transcript ? this.toModel(transcript) : undefined;
   }
 
+  async findByMeetingId(meetingId: string): Promise<Transcript[]> {
+    // Pastreaza istoricul cronologic.
+    const transcripts = await this.transcriptModel
+      .find({ meetingId })
+      .sort({ uploadedAt: 1, createdAt: 1 })
+      .exec();
+    return transcripts.map((transcript) => this.toModel(transcript));
+  }
+
   async update(id: string, data: Partial<Transcript>): Promise<Transcript | undefined> {
     const rest = { ...data };
     delete rest.id;

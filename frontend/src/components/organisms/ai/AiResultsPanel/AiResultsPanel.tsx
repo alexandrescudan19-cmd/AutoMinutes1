@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { FiZap } from "react-icons/fi";
-import { Card } from "../../../atoms";
+import { FiRotateCcw, FiZap } from "react-icons/fi";
+import { Button, Card } from "../../../atoms";
+import { Modal } from "../../../molecules/common";
 import ActionItemList from "../../action-item/ActionItemList/ActionItemList.tsx";
 import TranscriptUploadForm from "../../transcript/TranscriptUploadForm/TranscriptUploadForm.tsx";
 import { getAiResult, getAiResultActionItems } from "../../../../services/ai";
-import type { ActionItem, AIResult, Meeting, ProcessTranscriptResult } from "../../../../types";
+import {
+  listMeetingTranscriptVersions,
+  restoreMeetingTranscriptVersion,
+} from "../../../../services/meetings";
+import { formatDateTime } from "../../../../utils/date.ts";
+import type {
+  ActionItem,
+  AIResult,
+  Meeting,
+  ProcessTranscriptResult,
+  TranscriptVersion,
+} from "../../../../types";
 
 export interface AiResultsPanelProps {
   meeting: Meeting;
@@ -20,8 +32,14 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [subTab, setSubTab] = useState<SubTab>(meeting.aiResultId ? "summary" : "transcript");
+  const [transcriptVersions, setTranscriptVersions] = useState<TranscriptVersion[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState("");
+  const [restoringTranscriptId, setRestoringTranscriptId] = useState("");
 
   const loadResult = useCallback(async (aiResultId: string) => {
+    // Incarca rezultatele AI curente.
     setIsLoading(true);
     setError("");
     try {
@@ -38,15 +56,38 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
     }
   }, []);
 
+  const loadTranscriptVersions = useCallback(async () => {
+    // Incarca istoricul transcripturilor.
+    setIsHistoryLoading(true);
+    try {
+      setTranscriptVersions(await listMeetingTranscriptVersions(meeting.id));
+    } catch {
+      toast.error("Couldn't load transcript history.");
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, [meeting.id]);
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       if (meeting.aiResultId) {
         void loadResult(meeting.aiResultId);
+      } else {
+        setAiResult(null);
+        setActionItems([]);
       }
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
   }, [meeting.aiResultId, loadResult]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadTranscriptVersions();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadTranscriptVersions]);
 
   const isProcessing = meeting.aiStatus === "Processing";
   const onMeetingChangedRef = useRef(onMeetingChanged);
@@ -57,16 +98,44 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
 
   useEffect(() => {
     if (!isProcessing) return;
+    // Reimprospateaza cat timp proceseaza.
     const interval = setInterval(() => onMeetingChangedRef.current(), 4000);
     return () => clearInterval(interval);
   }, [isProcessing]);
 
   const handleProcessed = (result: ProcessTranscriptResult) => {
+    // Afiseaza rezultatul nou generat.
     toast.success("Transcript processed successfully.");
     setAiResult(result.aiResult);
     setActionItems(result.actionItems);
     setSubTab("summary");
+    void loadTranscriptVersions();
     onMeetingChanged();
+  };
+
+  const handleRestoreTranscript = async (transcriptId: string) => {
+    // Restaureaza versiunea selectata.
+    setRestoringTranscriptId(transcriptId);
+    try {
+      const result = await restoreMeetingTranscriptVersion(meeting.id, transcriptId);
+      toast.success("Transcript version restored.");
+
+      if (result.aiResultId) {
+        await loadResult(result.aiResultId);
+        setSubTab("summary");
+      } else {
+        setAiResult(null);
+        setActionItems([]);
+        setSubTab("transcript");
+      }
+
+      await loadTranscriptVersions();
+      onMeetingChanged();
+    } catch {
+      toast.error("Couldn't restore transcript version.");
+    } finally {
+      setRestoringTranscriptId("");
+    }
   };
 
   const subTabs: { key: SubTab; label: string }[] = [{ key: "transcript", label: "Transcript" }];
@@ -101,7 +170,23 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {subTab === "transcript" && (
-        <Card title={aiResult ? "Reprocess transcript" : "Transcript"}>
+        <Card
+          title={aiResult ? "Reprocess transcript" : "Transcript"}
+          actions={
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              isLoading={isHistoryLoading && isHistoryOpen}
+              onClick={() => {
+                setIsHistoryOpen(true);
+                void loadTranscriptVersions();
+              }}
+            >
+              History
+            </Button>
+          }
+        >
           {isProcessing ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <FiZap className="ai-pulse-icon text-3xl text-brand" aria-hidden="true" />
@@ -119,6 +204,90 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
           )}
         </Card>
       )}
+
+      <Modal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title="Transcript history"
+        size="lg"
+        footer={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            isLoading={isHistoryLoading}
+            onClick={() => void loadTranscriptVersions()}
+          >
+            Refresh
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Previous transcript uploads and AI processing versions for this meeting.
+          </p>
+
+          {transcriptVersions.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No transcript versions yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {transcriptVersions.map((version) => (
+                <div
+                  key={version.id}
+                  className="rounded-lg border border-gray-200 dark:border-gray-800"
+                >
+                  <div className="flex flex-col gap-3 p-3 md:flex-row md:items-center md:justify-between">
+                    <button
+                      type="button"
+                      className="min-w-0 text-left"
+                      onClick={() =>
+                        setExpandedTranscriptId((current) =>
+                          current === version.id ? "" : version.id,
+                        )
+                      }
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Version {version.version}
+                        </span>
+                        {version.isCurrent && (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                            Current
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDateTime(version.uploadedAt ?? version.createdAt ?? "")}
+                        </span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          {version.fileFormat}
+                        </span>
+                      </div>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<FiRotateCcw aria-hidden="true" />}
+                      disabled={version.isCurrent}
+                      isLoading={restoringTranscriptId === version.id}
+                      onClick={() => void handleRestoreTranscript(version.id)}
+                    >
+                      Restore
+                    </Button>
+                  </div>
+                  {expandedTranscriptId === version.id && (
+                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-gray-100 bg-gray-50 p-3 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300">
+                      {version.content}
+                    </pre>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {subTab === "summary" && aiResult && (
         <Card title="Summary">

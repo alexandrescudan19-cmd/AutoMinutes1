@@ -126,6 +126,11 @@ export interface Transcript {
   updatedAt?: string;
 }
 
+export interface TranscriptVersion extends Transcript {
+  version: number;
+  isCurrent: boolean;
+}
+
 export interface MeetingStatistics {
   durationMinutes?: number;
   participantCount?: number;
@@ -161,4 +166,10 @@ export interface ProcessTranscriptResult {
   transcript: Transcript;
   aiResult: AIResult;
   actionItems: ActionItem[];
+}
+
+export interface RestoreTranscriptVersionResult {
+  meeting: Meeting;
+  transcript: TranscriptVersion;
+  aiResultId?: string;
 }

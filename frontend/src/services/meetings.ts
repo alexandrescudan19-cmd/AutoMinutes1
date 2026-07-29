@@ -5,6 +5,8 @@ import type {
   MeetingHistoryQuery,
   MeetingHistoryResponse,
   MeetingParticipant,
+  RestoreTranscriptVersionResult,
+  TranscriptVersion,
   UpdateMeetingInput,
 } from "../types";
 
@@ -46,4 +48,16 @@ export function removeMeetingAttendee(meetingId: string, attendeeId: string) {
 
 export function importMeetTranscript(meetingId: string) {
   return api.post(`/meetings/${meetingId}/import-meet-transcript`).then((res) => res.data);
+}
+
+export function listMeetingTranscriptVersions(meetingId: string) {
+  return api
+    .get<TranscriptVersion[]>(`/meetings/${meetingId}/transcripts`)
+    .then((res) => res.data);
+}
+
+export function restoreMeetingTranscriptVersion(meetingId: string, transcriptId: string) {
+  return api
+    .post<RestoreTranscriptVersionResult>(`/meetings/${meetingId}/transcripts/${transcriptId}/restore`)
+    .then((res) => res.data);
 }

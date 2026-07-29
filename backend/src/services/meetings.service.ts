@@ -37,6 +37,24 @@ export type MeetingHistoryItem = Meeting & {
   actionItemsCount: number;
 };
 
+export type TranscriptVersionItem = {
+  id: string;
+  meetingId: string;
+  content: string;
+  fileFormat: string;
+  uploadedAt?: string | Date;
+  createdAt?: string;
+  updatedAt?: string;
+  version: number;
+  isCurrent: boolean;
+};
+
+export type RestoreTranscriptVersionResult = {
+  meeting: Meeting;
+  transcript: TranscriptVersionItem;
+  aiResultId?: string;
+};
+
 // Participants only ever reach Google Calendar / Invitation / Notification records
 // after normalizeParticipants() has filtered out anyone without an email - only they
 // can actually be invited. This type reflects that guarantee to the rest of the class.
@@ -209,8 +227,7 @@ export class MeetingsService {
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, pageCount);
 
-    // Calculam action items pentru toate rezultatele filtrate (nu doar pagina curenta),
-    // ca statisticile de mai sus sa reflecte intregul set filtrat, nu doar pagina afisata.
+    // Calculeaza statisticile complete filtrate.
     const annotatedMeetings = await this.withActionItemsCount(sortedMeetings);
     const items = annotatedMeetings.slice((safePage - 1) * pageSize, safePage * pageSize);
 
@@ -533,6 +550,53 @@ export class MeetingsService {
 
     await this.findOne(transcript.meetingId, user);
     return transcript;
+  }
+
+  async findTranscriptVersions(meetingId: string, user: AuthenticatedUser) {
+    const meeting = await this.findOne(meetingId, user);
+    const transcripts = await this.transcriptsRepository.findByMeetingId(meetingId);
+
+    // Marcheaza versiunea activa curenta.
+    return transcripts.map((transcript, index): TranscriptVersionItem => ({
+      ...transcript,
+      version: index + 1,
+      isCurrent: transcript.id === meeting.transcriptId?.toString(),
+    }));
+  }
+
+  async restoreTranscriptVersion(
+    meetingId: string,
+    transcriptId: string,
+    user: AuthenticatedUser,
+  ): Promise<RestoreTranscriptVersionResult> {
+    const meeting = await this.findOne(meetingId, user);
+    const transcript = await this.transcriptsRepository.findOne(transcriptId);
+    if (!transcript || transcript.meetingId.toString() !== meetingId) {
+      throw new NotFoundException(`Transcript #${transcriptId} not found for this meeting`);
+    }
+
+    const aiResult = await this.aiResultsRepository.findLatestByTranscriptId(transcriptId);
+
+    // Leaga AI-ul de transcript.
+    const updatedMeeting = await this.meetingsRepository.update(meetingId, {
+      transcriptId,
+      aiResultId: aiResult?.id ?? '',
+      aiStatus: aiResult ? AiStatus.Completed : AiStatus.Idle,
+    });
+
+    // Recalculeaza numarul versiunii restaurate.
+    const versions = await this.transcriptsRepository.findByMeetingId(meetingId);
+    const restoredIndex = versions.findIndex((version) => version.id === transcriptId);
+
+    return {
+      meeting: updatedMeeting ?? meeting,
+      transcript: {
+        ...transcript,
+        version: restoredIndex >= 0 ? restoredIndex + 1 : versions.length,
+        isCurrent: true,
+      },
+      aiResultId: aiResult?.id,
+    };
   }
 
   private normalizeParticipants(
