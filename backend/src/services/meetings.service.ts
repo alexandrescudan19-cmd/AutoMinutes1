@@ -152,6 +152,7 @@ export class MeetingsService {
           email: ownerUser.email,
           roleInMeeting: 'Organizer',
           attendanceStatus: AttendanceStatus.Accepted,
+          isArchived: true,
         })
       : undefined;
 

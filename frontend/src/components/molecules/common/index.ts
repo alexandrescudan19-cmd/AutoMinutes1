@@ -10,7 +10,7 @@ export type { ModalProps } from "./Modal/Modal.tsx";
 export { default as ConfirmDialog } from "./ConfirmDialog/ConfirmDialog.tsx";
 export type { ConfirmDialogProps } from "./ConfirmDialog/ConfirmDialog.tsx";
 
-export { default as StatusBadge } from "./StatusBadge/StatusBadge.tsx";
+export { default as StatusBadge, getStatusDotColor } from "./StatusBadge/StatusBadge.tsx";
 export type { StatusBadgeProps } from "./StatusBadge/StatusBadge.tsx";
 
 export { default as EditActions } from "./EditActions/EditActions.tsx";

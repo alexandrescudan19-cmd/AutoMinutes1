@@ -1,6 +1,15 @@
 import { useRef, useState } from "react";
-import { FiCheck, FiClock, FiFileText, FiUpload, FiUsers, FiVideo } from "react-icons/fi";
+import {
+  FiCheck,
+  FiClock,
+  FiEye,
+  FiFileText,
+  FiUpload,
+  FiUsers,
+  FiVideo,
+} from "react-icons/fi";
 import { Button, Input, Select, TextArea } from "../../../atoms";
+import { Modal } from "../../../molecules/common";
 import AttendeeSelector from "../../attendee/AttendeeSelector/AttendeeSelector.tsx";
 import { useGoogleConnectionStatus } from "../../../../hooks/useGoogleConnectionStatus";
 
@@ -49,7 +58,13 @@ function canPreviewTranscriptFile(file: File) {
   );
 }
 
-function SectionLabel({ icon, children }: { icon: React.ReactNode; children: string }) {
+function SectionLabel({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: string;
+}) {
   return (
     <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
       {icon}
@@ -66,11 +81,19 @@ export default function MeetingForm({
   showGoogleCalendarOption = false,
 }: MeetingFormProps) {
   const [title, setTitle] = useState(initialValues?.title ?? "");
-  const [description, setDescription] = useState(initialValues?.description ?? "");
-  const [startDateTime, setStartDateTime] = useState(initialValues?.startDateTime ?? "");
-  const [endDateTime, setEndDateTime] = useState(initialValues?.endDateTime ?? "");
+  const [description, setDescription] = useState(
+    initialValues?.description ?? "",
+  );
+  const [startDateTime, setStartDateTime] = useState(
+    initialValues?.startDateTime ?? "",
+  );
+  const [endDateTime, setEndDateTime] = useState(
+    initialValues?.endDateTime ?? "",
+  );
   const [status, setStatus] = useState(initialValues?.status ?? "Upcoming");
-  const [attendeeIds, setAttendeeIds] = useState<string[]>(initialValues?.attendeeIds ?? []);
+  const [attendeeIds, setAttendeeIds] = useState<string[]>(
+    initialValues?.attendeeIds ?? [],
+  );
   const [createGoogleCalendarEvent, setCreateGoogleCalendarEvent] = useState(
     initialValues?.createGoogleCalendarEvent ?? false,
   );
@@ -86,6 +109,7 @@ export default function MeetingForm({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [now] = useState(() => Date.now());
+  const [isTranscriptViewOpen, setIsTranscriptViewOpen] = useState(false);
 
   const isFutureMeeting = startDateTime
     ? new Date(startDateTime).getTime() > now
@@ -113,8 +137,10 @@ export default function MeetingForm({
     return "";
   };
 
-  const getDatePart = (value: string) => (value.includes("T") ? value.split("T")[0] : "");
-  const getTimePart = (value: string) => (value.includes("T") ? value.split("T")[1] : "");
+  const getDatePart = (value: string) =>
+    value.includes("T") ? value.split("T")[0] : "";
+  const getTimePart = (value: string) =>
+    value.includes("T") ? value.split("T")[1] : "";
   const meetingDate = getDatePart(startDateTime) || getDatePart(endDateTime);
 
   const handleDateChange = (date: string) => {
@@ -140,13 +166,17 @@ export default function MeetingForm({
   };
 
   const validateSchedule = (): string => {
-    if (!startDateTime || !endDateTime) return "Start and end dates are required.";
+    if (!startDateTime || !endDateTime)
+      return "Start and end dates are required.";
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       return "Enter a valid start and end date.";
     }
-    if (startDate.getFullYear() < MIN_YEAR || startDate.getFullYear() > MAX_YEAR) {
+    if (
+      startDate.getFullYear() < MIN_YEAR ||
+      startDate.getFullYear() > MAX_YEAR
+    ) {
       return `Enter a year between ${MIN_YEAR} and ${MAX_YEAR}.`;
     }
     if (endDate <= startDate) return "End date must be after the start date.";
@@ -156,13 +186,25 @@ export default function MeetingForm({
   const isDetailsValid = !validateDetails();
   const isScheduleValid = !validateSchedule();
   const isCurrentStepValid =
-    activeStep === "details" ? isDetailsValid : activeStep === "schedule" ? isScheduleValid : true;
+    activeStep === "details"
+      ? isDetailsValid
+      : activeStep === "schedule"
+        ? isScheduleValid
+        : true;
   const canFinish = isDetailsValid && isScheduleValid;
 
   const currentStepError =
-    activeStep === "details" ? validateDetails() : activeStep === "schedule" ? validateSchedule() : "";
+    activeStep === "details"
+      ? validateDetails()
+      : activeStep === "schedule"
+        ? validateSchedule()
+        : "";
 
-  const maxReachableIndex = !isDetailsValid ? 0 : !isScheduleValid ? 1 : steps.length - 1;
+  const maxReachableIndex = !isDetailsValid
+    ? 0
+    : !isScheduleValid
+      ? 1
+      : steps.length - 1;
 
   const goToStep = (index: number) => {
     if (index > maxReachableIndex) return;
@@ -213,8 +255,11 @@ export default function MeetingForm({
         status,
         attendeeIds,
         createGoogleCalendarEvent: isFutureMeeting && createGoogleCalendarEvent,
-        transcript: !isFutureMeeting && transcript.trim() ? transcript.trim() : undefined,
-        transcriptFile: !isFutureMeeting ? transcriptFile ?? undefined : undefined,
+        transcript:
+          !isFutureMeeting && transcript.trim() ? transcript.trim() : undefined,
+        transcriptFile: !isFutureMeeting
+          ? (transcriptFile ?? undefined)
+          : undefined,
         transcriptFileFormat,
       });
     } catch {
@@ -226,9 +271,12 @@ export default function MeetingForm({
 
   return (
     <div className="flex flex-col">
-      <div className="mb-5 flex items-center">
+      <div className="mb-4 flex items-center">
         {steps.map((step, index) => (
-          <div key={step.id} className="flex flex-1 items-center last:flex-none">
+          <div
+            key={step.id}
+            className="flex flex-1 items-center last:flex-none"
+          >
             <button
               type="button"
               onClick={() => goToStep(index)}
@@ -248,7 +296,9 @@ export default function MeetingForm({
               </span>
               <span
                 className={`text-xs font-medium ${
-                  index === stepIndex ? "text-brand" : "text-gray-500 dark:text-gray-400"
+                  index === stepIndex
+                    ? "text-brand"
+                    : "text-gray-500 dark:text-gray-400"
                 }`}
               >
                 {step.label}
@@ -257,7 +307,9 @@ export default function MeetingForm({
             {index < steps.length - 1 && (
               <div
                 className={`mx-2 h-0.5 flex-1 rounded ${
-                  index < stepIndex ? "bg-brand" : "bg-gray-200 dark:bg-gray-700"
+                  index < stepIndex
+                    ? "bg-brand"
+                    : "bg-gray-200 dark:bg-gray-700"
                 }`}
               />
             )}
@@ -265,7 +317,7 @@ export default function MeetingForm({
         ))}
       </div>
 
-      <div className="flex h-[400px] flex-col gap-4 overflow-y-auto">
+      <div className="flex h-[min(400px,46vh)] flex-col gap-4 overflow-y-auto pr-1">
         {activeStep === "details" && (
           <div className="flex flex-col gap-4">
             <Input
@@ -294,7 +346,9 @@ export default function MeetingForm({
 
         {activeStep === "schedule" && (
           <div className="flex flex-col gap-4">
-            <SectionLabel icon={<FiClock aria-hidden="true" />}>Schedule</SectionLabel>
+            <SectionLabel icon={<FiClock aria-hidden="true" />}>
+              Schedule
+            </SectionLabel>
             <Input
               label="Date"
               type="date"
@@ -323,7 +377,9 @@ export default function MeetingForm({
               />
             </div>
             {!meetingDate && (
-              <p className="text-xs text-gray-400 dark:text-gray-500">Pick the meeting date first.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Pick the meeting date first.
+              </p>
             )}
             <Select
               label="Status"
@@ -336,7 +392,9 @@ export default function MeetingForm({
 
         {activeStep === "attendees" && (
           <div className="flex flex-col gap-2">
-            <SectionLabel icon={<FiUsers aria-hidden="true" />}>Attendees</SectionLabel>
+            <SectionLabel icon={<FiUsers aria-hidden="true" />}>
+              Attendees
+            </SectionLabel>
             <AttendeeSelector
               selectedIds={attendeeIds}
               onChange={setAttendeeIds}
@@ -347,7 +405,9 @@ export default function MeetingForm({
 
         {activeStep === "google" && (
           <div className="flex flex-col gap-2">
-            <SectionLabel icon={<FiVideo aria-hidden="true" />}>Google Meet</SectionLabel>
+            <SectionLabel icon={<FiVideo aria-hidden="true" />}>
+              Google Meet
+            </SectionLabel>
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
@@ -360,8 +420,8 @@ export default function MeetingForm({
             </label>
             {!googleStatusLoading && !googleConnected && (
               <p className="text-xs text-amber-600 dark:text-amber-500">
-                You need to connect your Google account from the sidebar to create
-                Google Meet events.
+                You need to connect your Google account from the sidebar to
+                create Google Meet events.
               </p>
             )}
           </div>
@@ -369,33 +429,52 @@ export default function MeetingForm({
 
         {activeStep === "transcript" && (
           <div className="flex flex-col gap-2">
-            <SectionLabel icon={<FiFileText aria-hidden="true" />}>Transcript</SectionLabel>
+            <SectionLabel icon={<FiFileText aria-hidden="true" />}>
+              Transcript
+            </SectionLabel>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              The selected date is in the past. You can attach the meeting transcript now - at
-              Finish, it will automatically go into AI processing.
+              The selected date is in the past. You can attach the meeting
+              transcript now - at Finish, it will automatically go into AI
+              processing.
             </p>
             <TextArea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               placeholder="Paste the meeting transcript here (optional)..."
-              rows={10}
+              rows={8}
               className="font-mono text-sm"
+              style={{ resize: "none" }}
             />
             <input
               ref={transcriptFileInputRef}
               type="file"
               className="hidden"
-              onChange={(e) => void handleTranscriptFileChange(e.target.files?.[0])}
+              onChange={(e) =>
+                void handleTranscriptFileChange(e.target.files?.[0])
+              }
             />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              leftIcon={<FiUpload aria-hidden="true" />}
-              onClick={() => transcriptFileInputRef.current?.click()}
-            >
-              Upload transcript file
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<FiUpload aria-hidden="true" />}
+                onClick={() => transcriptFileInputRef.current?.click()}
+              >
+                Upload transcript file
+              </Button>
+              {transcript && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<FiEye aria-hidden="true" />}
+                  onClick={() => setIsTranscriptViewOpen(true)}
+                >
+                  View full transcript
+                </Button>
+              )}
+            </div>
             {transcriptFile && (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Selected file: {transcriptFile.name}
@@ -406,17 +485,27 @@ export default function MeetingForm({
         )}
       </div>
 
-      <p className="mt-4 min-h-[1.25rem] text-sm text-red-600 dark:text-red-400">
+      <p className="mt-2 min-h-[1.25rem] text-sm text-red-600 dark:text-red-400">
         {currentStepError || error}
       </p>
 
-      <div className="mt-5 flex justify-between gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+      <div className="mt-3 flex justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
         <div className="flex gap-2">
           {stepIndex > 0 && (
-            <Button type="button" variant="secondary" onClick={goBack} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={goBack}
+              disabled={isSubmitting}
+            >
               Back
             </Button>
           )}
@@ -430,12 +519,27 @@ export default function MeetingForm({
               {submitLabel}
             </Button>
           ) : (
-            <Button type="button" disabled={!isCurrentStepValid} onClick={goNext}>
+            <Button
+              type="button"
+              disabled={!isCurrentStepValid}
+              onClick={goNext}
+            >
               Next
             </Button>
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={isTranscriptViewOpen}
+        onClose={() => setIsTranscriptViewOpen(false)}
+        title="Full transcript"
+        size="lg"
+      >
+        <pre className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words font-mono text-sm text-gray-800 dark:text-gray-200">
+          {transcript}
+        </pre>
+      </Modal>
     </div>
   );
 }

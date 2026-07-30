@@ -20,8 +20,10 @@ const LABEL_TRANSITION =
   "inline-block origin-left overflow-hidden whitespace-nowrap transition-all duration-200";
 
 function labelClasses(collapsed: boolean, maxWidth = "max-w-[140px]") {
-  return `${LABEL_TRANSITION} ${
-    collapsed ? "ml-0 max-w-0 scale-x-0 opacity-0" : `ml-2 ${maxWidth} scale-x-100 opacity-100`
+  // Base classes always show the label (mobile drawer is never "collapsed" -
+  // that's a desktop-only concept), collapse is applied only at md: and up.
+  return `${LABEL_TRANSITION} ml-2 ${maxWidth} scale-x-100 opacity-100 ${
+    collapsed ? `md:ml-0 md:max-w-0 md:scale-x-0 md:opacity-0` : `md:ml-2 md:${maxWidth} md:scale-x-100 md:opacity-100`
   }`;
 }
 
@@ -116,8 +118,8 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
     <div ref={menuRef} className="relative">
       {open && (
         <div
-          className={`absolute bottom-full mb-2 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
-            collapsed ? "left-0 w-48" : "left-0 w-full"
+          className={`absolute bottom-full left-0 mb-2 w-full rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
+            collapsed ? "md:w-48" : ""
           }`}
         >
           <Button
@@ -136,7 +138,7 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
         onClick={() => setOpen((o) => !o)}
         title={collapsed ? fullName : undefined}
         className={`flex w-full cursor-pointer items-center rounded-lg px-2 py-2 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-          collapsed ? "justify-center" : ""
+          collapsed ? "md:justify-center" : ""
         }`}
       >
         <Avatar name={fullName} />
@@ -226,7 +228,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -236,31 +238,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-shrink-0 flex-col border-r border-gray-200 bg-white px-4 py-6 transition-transform duration-200 dark:border-gray-800 dark:bg-gray-900 md:relative md:z-auto md:translate-x-0 md:transition-[width] ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-shrink-0 flex-col border-r border-gray-200 bg-white px-4 py-6 transition-transform duration-200 dark:border-gray-800 dark:bg-gray-900 md:translate-x-0 md:transition-[width] ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } ${
           isCollapsed ? "md:w-20 md:px-2" : "md:w-64 md:px-4"
         }`}
       >
-        <button
-          type="button"
-          onClick={() => setIsSidebarOpen(false)}
-          aria-label="Close menu"
-          className="absolute right-3 top-3 rounded p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+        <div
+          className={`mb-6 flex items-center justify-between px-2 ${isCollapsed ? "md:justify-center" : ""}`}
         >
-          <FiX aria-hidden="true" />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIsCollapsed((v) => !v)}
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="absolute -right-3 top-1/2 z-10 hidden h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 md:flex"
-        >
-          {isCollapsed ? <FiChevronRight size={14} aria-hidden="true" /> : <FiChevronLeft size={14} aria-hidden="true" />}
-        </button>
-
-        <div className={`mb-6 flex items-center px-2 ${isCollapsed ? "flex-col gap-3" : "justify-between"}`}>
           <Link to="/dashboard" className="flex items-center" title={isCollapsed ? "AutoMinutes" : undefined}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-sm font-semibold text-white">
               A
@@ -269,7 +255,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
               AutoMinutes
             </span>
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <div className={isCollapsed ? "md:hidden" : ""}>
+              <ThemeToggle />
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Close menu"
+              className="rounded p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+            >
+              <FiX aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
         <button
@@ -307,34 +305,53 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </span>
         </button>
 
-        <nav className={`flex flex-1 flex-col gap-1 ${isCollapsed ? "mt-6" : ""}`}>
-          {NAV_ITEMS.map((item) => {
-            const isActive = location.pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                title={isCollapsed ? item.label : undefined}
-                className={`flex items-center rounded-lg py-2 text-sm font-medium transition-all duration-200 ${
-                  isCollapsed ? "justify-center px-0" : "px-3"
-                } ${
-                  isActive
-                    ? "bg-brand/10 text-brand"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-                }`}
-              >
-                {item.icon}
-                <span className={labelClasses(isCollapsed)}>{item.label}</span>
-              </Link>
-            );
-          })}
+        <nav className="flex flex-1 flex-col">
+          <div className="flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = location.pathname.startsWith(item.to);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  title={isCollapsed ? item.label : undefined}
+                  className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                    isCollapsed ? "md:justify-center md:px-0" : ""
+                  } ${
+                    isActive
+                      ? "bg-brand/10 text-brand"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                  }`}
+                >
+                  {item.icon}
+                  <span className={labelClasses(isCollapsed)}>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div
+            className={`relative hidden flex-1 md:block ${isCollapsed ? "md:-mx-2" : "md:-mx-4"}`}
+          >
+            <button
+              type="button"
+              onClick={() => setIsCollapsed((v) => !v)}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="absolute -right-3 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            >
+              {isCollapsed ? <FiChevronRight size={14} aria-hidden="true" /> : <FiChevronLeft size={14} aria-hidden="true" />}
+            </button>
+          </div>
         </nav>
 
         <UserMenu collapsed={isCollapsed} />
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 md:hidden">
+      <main
+        className={`flex-1 overflow-y-auto transition-[margin-left] duration-200 ${
+          isCollapsed ? "md:ml-20" : "md:ml-64"
+        }`}
+      >
+        <div className="sticky top-0 z-20 flex items-center border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 md:hidden">
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
@@ -343,9 +360,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
           >
             <FiMenu aria-hidden="true" />
           </button>
-          <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            AutoMinutes
-          </span>
         </div>
 
         <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">{children}</div>

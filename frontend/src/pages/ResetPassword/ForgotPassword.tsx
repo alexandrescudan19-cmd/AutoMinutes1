@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
-import { Button, Card, Input } from "../../components/atoms";
+import { motion } from "framer-motion";
+import { Button, Input } from "../../components/atoms";
+import { AuthLayout } from "../../components/templates";
 import { api } from "../../services/api";
 
 function getApiErrorMessage(error: unknown) {
@@ -34,12 +36,25 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
-      <Card title="Forgot password" className="w-full max-w-md">
+    <AuthLayout>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl"
+      >
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-sm font-bold text-white shadow-lg shadow-brand/40">
+            A
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight text-white">Forgot password</h2>
+          <p className="mt-1 text-sm text-white/50">We'll email you a reset link</p>
+        </div>
+
         {submitted ? (
           <div className="flex flex-col items-center gap-4 text-center">
-            <p className="text-green-700 dark:text-green-400">{message}</p>
-            <Link to="/login" className="text-brand hover:underline">
+            <p className="text-sm text-green-400">{message}</p>
+            <Link to="/login" className="text-sm font-medium text-white link-underline">
               Back to sign in
             </Link>
           </div>
@@ -51,9 +66,9 @@ export default function ForgotPasswordPage() {
               void handleSubmit();
             }}
           >
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter the email address associated with your account and we'll
-              send you a link to reset your password.
+            <p className="text-sm text-white/50">
+              Enter the email address associated with your account and we'll send you a link to reset your
+              password.
             </p>
             <Input
               label="Email"
@@ -62,19 +77,19 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
             <Button type="submit" isLoading={isLoading} fullWidth>
               Send reset link
             </Button>
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-center text-sm text-white/40">
               Remembered your password?{" "}
-              <Link to="/login" className="text-brand link-underline">
+              <Link to="/login" className="font-medium text-white link-underline">
                 Sign in
               </Link>
             </p>
           </form>
         )}
-      </Card>
-    </div>
+      </motion.div>
+    </AuthLayout>
   );
 }

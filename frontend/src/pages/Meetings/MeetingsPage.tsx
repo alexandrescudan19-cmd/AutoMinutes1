@@ -110,7 +110,6 @@ export default function MeetingsPage() {
     null,
   );
   const [searchParams, setSearchParams] = useSearchParams();
-  const isFirstUrlSync = useRef(true);
   const didMountClientFilters = useRef(false);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
@@ -163,6 +162,8 @@ export default function MeetingsPage() {
       const initialHasActionItems = searchParams.get("hasActionItems") === "1";
       const initialHasClientFilters =
         !!initialDateFrom || !!initialDateTo || initialHasActionItems;
+      const initialMeetingId = searchParams.get("meeting");
+      if (initialMeetingId) setSelectedMeetingId(initialMeetingId);
 
       useMeetingsStore.setState((state) => ({
         filters: {
@@ -215,10 +216,13 @@ export default function MeetingsPage() {
   }, [hasClientSideFilters]);
 
   useEffect(() => {
-    if (isFirstUrlSync.current) {
-      isFirstUrlSync.current = false;
-      return;
-    }
+    // Wait until the deferred initial-load callback above has actually run (and
+    // resolved any ?meeting=/filter params from the URL) before writing state back.
+    // A plain "skip the first run" ref is defeated by React StrictMode's dev-only
+    // double-invoke of effects at mount (both invocations share the same stale
+    // closure) - gating on this ref, which only flips inside the async setTimeout
+    // callback, sidesteps that entirely.
+    if (!didMountClientFilters.current) return;
     const next = new URLSearchParams();
     if (filters.search) next.set("search", filters.search);
     if (filters.status) next.set("status", filters.status);
@@ -229,6 +233,7 @@ export default function MeetingsPage() {
     if (dateTo) next.set("dateTo", dateTo);
     if (onlyWithActionItems) next.set("hasActionItems", "1");
     if (effectivePage > 1) next.set("page", String(effectivePage));
+    if (selectedMeetingId) next.set("meeting", selectedMeetingId);
     setSearchParams(next, { replace: true });
   }, [
     filters.search,
@@ -239,6 +244,7 @@ export default function MeetingsPage() {
     dateTo,
     onlyWithActionItems,
     effectivePage,
+    selectedMeetingId,
   ]);
 
   const activeSecondaryCount =

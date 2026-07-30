@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { FiAlertTriangle, FiCheckSquare, FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { Button, Input, Select } from "../../../atoms";
-import { ConfirmDialog, EditActions, EmptyState, StatusBadge } from "../../../molecules/common";
+import { ConfirmDialog, EditActions, EmptyState, StatusBadge, getStatusDotColor } from "../../../molecules/common";
 import { createActionItem, deleteActionItem, updateActionItem } from "../../../../services/actionItems";
 import { formatDate, toDateInputValue } from "../../../../utils/date.ts";
 import type { ActionItem, ActionItemListItem, ActionItemStatus } from "../../../../types";
@@ -14,6 +15,7 @@ export interface ActionItemListProps {
   onOpenMeeting?: (meetingId: string) => void;
   meetingId?: string;
   allowCreate?: boolean;
+  highlightId?: string;
 }
 
 const STATUS_GROUPS: { key: ActionItemStatus | "Unknown"; label: string }[] = [
@@ -54,6 +56,7 @@ export default function ActionItemList({
   onOpenMeeting,
   meetingId,
   allowCreate = false,
+  highlightId,
 }: ActionItemListProps) {
   const [editingId, setEditingId] = useState("");
   const [editTask, setEditTask] = useState("");
@@ -64,11 +67,20 @@ export default function ActionItemList({
   const [pendingDeleteId, setPendingDeleteId] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [busyToggleId, setBusyToggleId] = useState("");
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [newTask, setNewTask] = useState("");
   const [newResponsiblePerson, setNewResponsiblePerson] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [newStatus, setNewStatus] = useState<ActionItemStatus>("Pending");
   const [isCreating, setIsCreating] = useState(false);
+
+  const closeAddForm = () => {
+    setIsAddFormOpen(false);
+    setNewTask("");
+    setNewResponsiblePerson("");
+    setNewDueDate("");
+    setNewStatus("Pending");
+  };
 
   const groupedItems = useMemo(
     () =>
@@ -154,10 +166,7 @@ export default function ActionItemList({
         status: newStatus,
       });
       toast.success("Action item added.");
-      setNewTask("");
-      setNewResponsiblePerson("");
-      setNewDueDate("");
-      setNewStatus("Pending");
+      closeAddForm();
       onChanged();
     } catch {
       toast.error("Couldn't add the action item.");
@@ -168,43 +177,63 @@ export default function ActionItemList({
 
   const createForm =
     allowCreate && meetingId ? (
-      <div className="grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
-        <Input
-          label="Task"
-          value={newTask}
-          onChange={(event) => setNewTask(event.target.value)}
-        />
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Input
-            label="Assignee"
-            value={newResponsiblePerson}
-            onChange={(event) => setNewResponsiblePerson(event.target.value)}
-          />
-          <Input
-            label="Due date"
-            type="date"
-            value={newDueDate}
-            onChange={(event) => setNewDueDate(event.target.value)}
-          />
-          <Select
-            label="Status"
-            options={STATUS_OPTIONS}
-            value={newStatus}
-            onChange={(event) => setNewStatus(event.target.value as ActionItemStatus)}
-          />
-        </div>
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            leftIcon={<FiPlus aria-hidden="true" />}
-            isLoading={isCreating}
-            disabled={!newTask.trim() || !newResponsiblePerson.trim()}
-            onClick={() => void saveNewActionItem()}
-          >
-            Add action item
-          </Button>
-        </div>
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          fullWidth
+          leftIcon={<FiPlus className={`transition-transform duration-200 ${isAddFormOpen ? "rotate-45" : ""}`} aria-hidden="true" />}
+          onClick={() => (isAddFormOpen ? closeAddForm() : setIsAddFormOpen(true))}
+        >
+          Add action item
+        </Button>
+
+        <AnimatePresence initial={false}>
+          {isAddFormOpen && (
+            <motion.div
+              key="add-form"
+              initial={{ opacity: 0, height: 0, scale: 0.98 }}
+              animate={{ opacity: 1, height: "auto", scale: 1 }}
+              exit={{ opacity: 0, height: 0, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                <Input
+                  label="Task"
+                  value={newTask}
+                  onChange={(event) => setNewTask(event.target.value)}
+                />
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Input
+                    label="Assignee"
+                    value={newResponsiblePerson}
+                    onChange={(event) => setNewResponsiblePerson(event.target.value)}
+                  />
+                  <Input
+                    label="Due date"
+                    type="date"
+                    value={newDueDate}
+                    onChange={(event) => setNewDueDate(event.target.value)}
+                  />
+                  <Select
+                    label="Status"
+                    options={STATUS_OPTIONS}
+                    value={newStatus}
+                    onChange={(event) => setNewStatus(event.target.value as ActionItemStatus)}
+                  />
+                </div>
+                <EditActions
+                  onCancel={closeAddForm}
+                  onConfirm={() => void saveNewActionItem()}
+                  isLoading={isCreating}
+                  confirmLabel="Add"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     ) : null;
 
@@ -270,27 +299,39 @@ export default function ActionItemList({
               }
 
               const overdue = isOverdue(item);
+              const isHighlighted = highlightId === item.id;
 
               return (
                 <div
                   key={item.id}
-                  className={`grid min-w-0 gap-3 rounded-lg border bg-white p-3 lg:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] lg:items-center dark:bg-gray-900 ${
-                    overdue ? "border-red-400 dark:border-red-700" : "border-gray-200 dark:border-gray-700"
+                  id={`action-item-${item.id}`}
+                  className={`grid min-w-0 gap-3 rounded-lg border bg-white p-3 transition-shadow duration-300 lg:grid-cols-[auto_minmax(0,1fr)_160px_150px_120px_auto] lg:items-center dark:bg-gray-900 ${
+                    isHighlighted
+                      ? "border-brand ring-2 ring-brand ring-offset-2 dark:ring-offset-gray-900"
+                      : overdue
+                        ? "border-red-400 dark:border-red-700"
+                        : "border-gray-200 dark:border-gray-700"
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={item.status === "Completed"}
-                    disabled={busyToggleId === item.id}
-                    onChange={() => void toggleStatus(item)}
-                    className="mt-1 h-4 w-4 cursor-pointer"
-                    aria-label={item.task}
-                  />
-                  <div className="min-w-0">
-                    <p className="break-words text-sm font-medium leading-5 text-gray-900 dark:text-gray-100">{item.task}</p>
-                    {showMeetingTitle && hasMeetingTitle(item) && (
-                      <p className="mt-1 break-words text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
-                    )}
+                  <div className="flex min-w-0 items-start gap-2 lg:contents">
+                    <input
+                      type="checkbox"
+                      checked={item.status === "Completed"}
+                      disabled={busyToggleId === item.id}
+                      onChange={() => void toggleStatus(item)}
+                      className="mt-1 h-4 w-4 shrink-0 cursor-pointer"
+                      aria-label={item.task}
+                    />
+                    <span
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full lg:hidden ${getStatusDotColor(item.status)}`}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium leading-5 text-gray-900 dark:text-gray-100">{item.task}</p>
+                      {showMeetingTitle && hasMeetingTitle(item) && (
+                        <p className="mt-1 break-words text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="min-w-0 break-words rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     {item.responsiblePerson || "Unassigned"}
@@ -305,7 +346,9 @@ export default function ActionItemList({
                     {overdue && <FiAlertTriangle className="shrink-0" aria-hidden="true" />}
                     {formatDate(item.dueDate) || "No due date"}
                   </div>
-                  <StatusBadge status={item.status} />
+                  <div className="hidden lg:block">
+                    <StatusBadge status={item.status} />
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {showMeetingTitle && hasMeetingTitle(item) && onOpenMeeting && (
                       <Button

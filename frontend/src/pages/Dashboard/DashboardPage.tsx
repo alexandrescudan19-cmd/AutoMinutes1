@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiAlertTriangle, FiArrowRight, FiCalendar } from "react-icons/fi";
 import { Card } from "../../components/atoms";
-import { MeetingDetailsModal, Pagination, StatCard, StatusBadge } from "../../components/molecules";
+import { MeetingDetailsModal, Pagination, StatCard, StatusBadge, getStatusDotColor } from "../../components/molecules";
 import { AppLayout } from "../../components/templates";
 import { listMeetings } from "../../services/meetings";
 import { listActionItems } from "../../services/actionItems";
@@ -17,6 +18,7 @@ function isOverdue(item: ActionItemListItem) {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [actionItems, setActionItems] = useState<ActionItemListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -179,7 +181,7 @@ export default function DashboardPage() {
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => openMeeting(item.meetingId)}
+                          onClick={() => navigate(`/action-items?item=${item.id}`)}
                           className={`flex flex-col gap-3 rounded-lg border px-3 py-2 text-left hover:bg-gray-50 sm:flex-row sm:items-start dark:hover:bg-gray-800 ${
                             overdue ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/40" : "border-gray-200 dark:border-gray-700"
                           }`}
@@ -188,7 +190,11 @@ export default function DashboardPage() {
                             <FiAlertTriangle className="shrink-0 text-red-500 dark:text-red-400" aria-hidden="true" />
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <p className="flex items-center gap-1.5 break-words text-sm font-medium text-gray-900 dark:text-gray-100">
+                              <span
+                                className={`h-2 w-2 shrink-0 rounded-full sm:hidden ${getStatusDotColor(item.status)}`}
+                                aria-hidden="true"
+                              />
                               {item.task}
                             </p>
                             <p className="break-words text-xs text-gray-500 dark:text-gray-400">{item.meetingTitle}</p>
@@ -198,7 +204,9 @@ export default function DashboardPage() {
                           >
                             {formatDate(item.dueDate)}
                           </span>
-                          <StatusBadge status={item.status} />
+                          <div className="hidden sm:block">
+                            <StatusBadge status={item.status} />
+                          </div>
                         </button>
                       );
                     })}

@@ -121,7 +121,7 @@ export default function MeetingDetailsModal({
 
       {meeting && (
         <div className="flex flex-col gap-4">
-          <div className="flex gap-1 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex shrink-0 gap-1 border-b border-gray-100 dark:border-gray-800">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -138,7 +138,7 @@ export default function MeetingDetailsModal({
             ))}
           </div>
 
-          <div className="h-[600px] overflow-y-auto">
+          <div className="h-[min(440px,55vh)] overflow-y-auto pr-1 pt-1 pb-2">
             {activeTab === "overview" &&
               (isEditing ? (
                 <MeetingForm

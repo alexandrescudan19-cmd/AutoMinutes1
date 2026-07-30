@@ -26,7 +26,7 @@ export class AttendeesRepository {
 
   async findAll(): Promise<Attendee[]> {
     // Listeaza participantii din baza. acum.
-    const attendees = await this.attendeeModel.find().exec();
+    const attendees = await this.attendeeModel.find({ isArchived: { $ne: true } }).exec();
     return attendees.map((attendee) => this.toModel(attendee));
   }
 
@@ -48,8 +48,10 @@ export class AttendeesRepository {
   }
 
   async remove(id: string): Promise<Attendee | undefined> {
-    // Sterge participantul dupa id. acum.
-    const attendee = await this.attendeeModel.findByIdAndDelete(id).exec();
+    // Arhiveaza participantul (soft-delete), ca sedintele care il folosesc deja sa nu se strice.
+    const attendee = await this.attendeeModel
+      .findByIdAndUpdate(id, { isArchived: true }, { returnDocument: 'after' })
+      .exec();
     return attendee ? this.toModel(attendee) : undefined;
   }
 

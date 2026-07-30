@@ -40,6 +40,9 @@ export default function AttendeeSelector({
   const [pendingDeleteId, setPendingDeleteId] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -146,6 +149,24 @@ export default function AttendeeSelector({
     }
   };
 
+  const confirmDeleteAll = async () => {
+    // Sterge toti participantii salvati global.
+    setIsDeletingAll(true);
+    try {
+      const ids = attendees.map((a) => a.id);
+      const results = await Promise.allSettled(ids.map((id) => deleteAttendee(id)));
+      const deletedIds = new Set(ids.filter((_, index) => results[index].status === "fulfilled"));
+      setAttendees((prev) => prev.filter((a) => !deletedIds.has(a.id)));
+      onChange(selectedIds.filter((id) => !deletedIds.has(id)));
+      if (results.some((result) => result.status === "rejected")) {
+        setError("Some attendees couldn't be deleted.");
+      }
+      setIsDeleteAllOpen(false);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
 
   if (isLoading) return <Loader size="sm" label="Loading attendees…" />;
 
@@ -154,23 +175,10 @@ export default function AttendeeSelector({
       <p className="min-h-[1rem] text-xs text-red-600 dark:text-red-400">{error}</p>
 
       {selectedAttendees.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {selectedAttendees.map((a) => (
-              <Chip key={a.id} label={a.name} onRemove={() => deselect(a.id)} removeLabel={`Unselect ${a.name}`} />
-            ))}
-          </div>
-          <div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              leftIcon={<FiTrash2 aria-hidden="true" />}
-              onClick={() => onChange([])}
-            >
-              Clear selected
-            </Button>
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {selectedAttendees.map((a) => (
+            <Chip key={a.id} label={a.name} onRemove={() => deselect(a.id)} removeLabel={`Unselect ${a.name}`} />
+          ))}
         </div>
       )}
 
@@ -213,15 +221,15 @@ export default function AttendeeSelector({
               onChange={setQuery}
               placeholder="Search attendees…"
             />
-            {selectedIds.length > 0 && (
+            {attendees.length > 0 && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 leftIcon={<FiTrash2 aria-hidden="true" />}
-                onClick={() => onChange([])}
+                onClick={() => setIsDeleteAllOpen(true)}
               >
-                Clear selected
+                Delete all
               </Button>
             )}
           </div>
@@ -262,11 +270,21 @@ export default function AttendeeSelector({
 
       <ConfirmDialog
         isOpen={!!pendingDeleteId}
-        message="Permanently delete this attendee from the saved list? They'll also disappear from meetings that already use them."
+        message="Remove this attendee from the saved list? Meetings that already use them are not affected."
         variant="danger"
         isLoading={isDeleting}
         onConfirm={() => void confirmDelete()}
         onCancel={() => setPendingDeleteId("")}
+      />
+
+      <ConfirmDialog
+        isOpen={isDeleteAllOpen}
+        title="Delete all saved attendees?"
+        message={`Remove all ${attendees.length} saved attendees from the list? Meetings that already use them are not affected.`}
+        variant="danger"
+        isLoading={isDeletingAll}
+        onConfirm={() => void confirmDeleteAll()}
+        onCancel={() => setIsDeleteAllOpen(false)}
       />
     </div>
   );

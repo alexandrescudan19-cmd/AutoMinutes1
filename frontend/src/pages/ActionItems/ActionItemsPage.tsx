@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { Button, Card, Input, Select } from "../../components/atoms";
@@ -35,6 +36,7 @@ export default function ActionItemsPage() {
   const [error, setError] = useState("");
   const [activeCard, setActiveCard] = useState<CardKey>(() => readCardFromParams(searchParams));
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [newMeetingId, setNewMeetingId] = useState("");
   const [newTask, setNewTask] = useState("");
   const [newResponsiblePerson, setNewResponsiblePerson] = useState("");
@@ -45,6 +47,8 @@ export default function ActionItemsPage() {
     const fromUrl = Number(searchParams.get("page"));
     return fromUrl > 0 ? fromUrl : 1;
   });
+  const [highlightId, setHighlightId] = useState("");
+  const hasAppliedItemParam = useRef(false);
 
   const assignees = useMemo(
     () =>
@@ -106,6 +110,14 @@ export default function ActionItemsPage() {
     }
   };
 
+  const closeAddForm = () => {
+    setIsAddFormOpen(false);
+    setNewTask("");
+    setNewResponsiblePerson("");
+    setNewDueDate("");
+    setNewStatus("Pending");
+  };
+
   const saveNewActionItem = async () => {
     if (!newMeetingId || !newTask.trim() || !newResponsiblePerson.trim()) return;
     setIsCreating(true);
@@ -118,10 +130,7 @@ export default function ActionItemsPage() {
         status: newStatus,
       });
       toast.success("Action item added.");
-      setNewTask("");
-      setNewResponsiblePerson("");
-      setNewDueDate("");
-      setNewStatus("Pending");
+      closeAddForm();
       await loadActionItems();
     } catch {
       toast.error("Couldn't add the action item.");
@@ -140,12 +149,50 @@ export default function ActionItemsPage() {
   }, []);
 
   useEffect(() => {
+    // Wait for the initial load (and any ?item= deep-link resolution) before writing
+    // the URL back, otherwise this fires with stale/default state and wipes ?item=
+    // before it's ever read (React StrictMode's dev-only double-invoke defeats a
+    // simple "skip the first run" ref here, since both invocations share the same
+    // stale closure - gating on real data sidesteps that entirely).
+    if (actionItems.length === 0) return;
     const next = new URLSearchParams();
     if (activeCard !== "all") next.set("card", activeCard);
     if (assigneeFilter !== "all") next.set("assignee", assigneeFilter);
     if (effectivePage > 1) next.set("page", String(effectivePage));
+    if (highlightId) next.set("item", highlightId);
     setSearchParams(next, { replace: true });
-  }, [activeCard, assigneeFilter, effectivePage, setSearchParams]);
+  }, [activeCard, assigneeFilter, effectivePage, highlightId, actionItems.length, setSearchParams]);
+
+  useEffect(() => {
+    if (hasAppliedItemParam.current) return;
+    const itemId = searchParams.get("item");
+    if (!itemId || actionItems.length === 0) return;
+    hasAppliedItemParam.current = true;
+
+    const item = actionItems.find((ai) => ai.id === itemId);
+    if (!item) return;
+
+    setAssigneeFilter("all");
+    const groupKey: CardKey = CARD_GROUPS.some((group) => group.key === item.status)
+      ? (item.status as CardKey)
+      : "all";
+    setActiveCard(groupKey);
+
+    const groupItems =
+      groupKey === "all" ? actionItems : actionItems.filter((ai) => ai.status === groupKey);
+    const index = groupItems.findIndex((ai) => ai.id === itemId);
+    setPage(index >= 0 ? Math.floor(index / PAGE_SIZE) + 1 : 1);
+    setHighlightId(itemId);
+  }, [actionItems, searchParams]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.getElementById(`action-item-${highlightId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timeoutId = window.setTimeout(() => setHighlightId(""), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [highlightId, pagedItems]);
 
   const selectCard = (key: CardKey) => {
     setActiveCard(key);
@@ -197,56 +244,82 @@ export default function ActionItemsPage() {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <Card title="Add action item">
-          <div className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(220px,2fr)_minmax(160px,1fr)_150px_150px] lg:items-end">
-            <Select
-              label="Meeting"
-              value={newMeetingId}
-              options={meetings.map((meeting) => ({
-                value: meeting.id,
-                label: meeting.title,
-              }))}
-              onChange={(event) => setNewMeetingId(event.target.value)}
-            />
-            <Input
-              label="Task"
-              value={newTask}
-              onChange={(event) => setNewTask(event.target.value)}
-            />
-            <Input
-              label="Assignee"
-              value={newResponsiblePerson}
-              onChange={(event) => setNewResponsiblePerson(event.target.value)}
-            />
-            <Input
-              label="Due date"
-              type="date"
-              value={newDueDate}
-              onChange={(event) => setNewDueDate(event.target.value)}
-            />
-            <Select
-              label="Status"
-              value={newStatus}
-              options={[
-                { value: "Pending", label: "Pending" },
-                { value: "In Progress", label: "In Progress" },
-                { value: "Completed", label: "Completed" },
-              ]}
-              onChange={(event) => setNewStatus(event.target.value as ActionItemStatus)}
-            />
-          </div>
-          <div className="mt-3 flex justify-end">
-            <Button
-              type="button"
-              leftIcon={<FiPlus />}
-              isLoading={isCreating}
-              disabled={!newMeetingId || !newTask.trim() || !newResponsiblePerson.trim()}
-              onClick={() => void saveNewActionItem()}
+        <Button
+          type="button"
+          variant="secondary"
+          fullWidth
+          leftIcon={<FiPlus className={`transition-transform duration-200 ${isAddFormOpen ? "rotate-45" : ""}`} />}
+          onClick={() => (isAddFormOpen ? closeAddForm() : setIsAddFormOpen(true))}
+        >
+          Add action item
+        </Button>
+
+        <AnimatePresence initial={false}>
+          {isAddFormOpen && (
+            <motion.div
+              key="add-form"
+              initial={{ opacity: 0, height: 0, scale: 0.98 }}
+              animate={{ opacity: 1, height: "auto", scale: 1 }}
+              exit={{ opacity: 0, height: 0, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
             >
-              Add action item
-            </Button>
-          </div>
-        </Card>
+              <Card title="Add action item">
+                <div className="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_minmax(220px,2fr)_minmax(160px,1fr)_150px_150px] lg:items-end">
+                  <Select
+                    label="Meeting"
+                    value={newMeetingId}
+                    options={meetings.map((meeting) => ({
+                      value: meeting.id,
+                      label: meeting.title,
+                    }))}
+                    onChange={(event) => setNewMeetingId(event.target.value)}
+                  />
+                  <Input
+                    label="Task"
+                    value={newTask}
+                    onChange={(event) => setNewTask(event.target.value)}
+                  />
+                  <Input
+                    label="Assignee"
+                    value={newResponsiblePerson}
+                    onChange={(event) => setNewResponsiblePerson(event.target.value)}
+                  />
+                  <Input
+                    label="Due date"
+                    type="date"
+                    value={newDueDate}
+                    onChange={(event) => setNewDueDate(event.target.value)}
+                  />
+                  <Select
+                    label="Status"
+                    value={newStatus}
+                    options={[
+                      { value: "Pending", label: "Pending" },
+                      { value: "In Progress", label: "In Progress" },
+                      { value: "Completed", label: "Completed" },
+                    ]}
+                    onChange={(event) => setNewStatus(event.target.value as ActionItemStatus)}
+                  />
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button type="button" variant="secondary" disabled={isCreating} onClick={closeAddForm}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    leftIcon={<FiPlus />}
+                    isLoading={isCreating}
+                    disabled={!newMeetingId || !newTask.trim() || !newResponsiblePerson.trim()}
+                    onClick={() => void saveNewActionItem()}
+                  >
+                    Add action item
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {cards.map((group) => {
@@ -282,6 +355,7 @@ export default function ActionItemsPage() {
                 items={pagedItems}
                 showMeetingTitle
                 onChanged={() => void loadActionItems()}
+                highlightId={highlightId}
               />
               {pageCount > 1 && (
                 <div className="mt-4 flex justify-center">

@@ -25,6 +25,9 @@ export class Attendee {
   @Prop({ type: String, enum: AttendanceStatus, default: AttendanceStatus.Invited })
   attendanceStatus!: AttendanceStatus;
 
+  @Prop({ type: Boolean, default: false })
+  isArchived?: boolean;
+
   createdAt!: string;
   updatedAt!: string;
 }
