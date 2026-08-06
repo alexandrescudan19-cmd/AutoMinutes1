@@ -44,10 +44,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const canResendVerification = error.toLowerCase().includes("verify your email");
 
   const handleSubmit = async () => {
     setError("");
+    setResendMessage("");
     setIsLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, password });
@@ -60,6 +64,19 @@ export default function LoginPage() {
       setError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendMessage("");
+    setIsResending(true);
+    try {
+      const { data } = await api.post("/auth/resend-verification", { email });
+      setResendMessage(data.message);
+    } catch (err: unknown) {
+      setResendMessage(getApiErrorMessage(err));
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -105,6 +122,17 @@ export default function LoginPage() {
             </Link>
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
+          {canResendVerification && (
+            <button
+              type="button"
+              className="text-left text-sm font-medium text-white link-underline"
+              disabled={isResending}
+              onClick={() => void handleResendVerification()}
+            >
+              {isResending ? "Sending verification email..." : "Resend verification email"}
+            </button>
+          )}
+          {resendMessage && <p className="text-sm text-green-400">{resendMessage}</p>}
           <Button type="submit" isLoading={isLoading} fullWidth>
             Sign in
           </Button>

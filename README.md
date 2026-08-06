@@ -1,98 +1,119 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# AutoMinutes
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+AutoMinutes este o aplicatie full-stack pentru meeting-uri, transcripturi, rezultate AI si action items.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Structura
 
-## Description
+- `backend` - API NestJS, MongoDB, Google OAuth/Calendar, mail si procesare AI prin Ollama.
+- `frontend` - React + Vite.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Rulare Locala
 
-## Project setup
+Backend:
 
 ```bash
-$ npm install
+cd backend
+npm install
+copy .env.example .env
+npm run start:dev
 ```
 
-## Compile and run the project
+Frontend:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd frontend
+npm install
+copy .env.example .env
+npm run dev
 ```
 
-## Run tests
+Implicit:
+
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:3500`
+- Swagger: `http://localhost:3500/api/docs`
+- health check: `http://localhost:3500/health`
+
+## Docker
+
+Pentru o rulare portabila cu MongoDB inclus:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up --build
 ```
 
-## Deployment
+Aplicatia va fi disponibila la:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- frontend Docker: `http://localhost:8080`
+- backend Docker: `http://localhost:3500`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Variabile Backend
+
+Configureaza `backend/.env` pornind de la `backend/.env.example`.
+
+Variabile importante:
+
+- `PORT` - portul API-ului.
+- `HOST` - foloseste `0.0.0.0` pentru hosting in containere sau platforme cloud.
+- `MONGODB_URI` - conexiunea MongoDB locala sau Atlas.
+- `JWT_SECRET` - secret puternic pentru token-uri.
+- `FRONTEND_URL` - URL-ul public al frontend-ului.
+- `CORS_ORIGINS` - originile permise, separate prin virgula.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` - configurare Google OAuth.
+- `ENCRYPTION_KEY` - cheie hex de 64 caractere.
+- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS` - SMTP.
+- `OLLAMA_URL`, `OLLAMA_MODEL` - configurare AI locala sau server AI.
+- `AI_PROVIDER` - `auto`, `ollama` sau `fallback`.
+
+## Variabile Frontend
+
+Configureaza `frontend/.env` pornind de la `frontend/.env.example`.
+
+```env
+VITE_BACKEND_URL=https://api-ul-tau.example.com
+```
+
+La Vite, aceasta variabila se pune inainte de build. Pe Vercel/Netlify o adaugi in setarile proiectului.
+
+## Deploy Pe Platforme Comune
+
+### Netlify Pentru Frontend
+
+Proiectul include `netlify.toml`, deci Netlify poate detecta automat:
+
+- Base directory: `frontend`
+- Build command: `npm run build`
+- Publish directory: `dist`
+
+In Netlify trebuie setata variabila:
+
+```env
+VITE_BACKEND_URL=https://backend-ul-tau
+```
+
+Fara `VITE_BACKEND_URL`, frontend-ul de productie nu va porni corect, pentru ca nu stie unde este API-ul.
+
+Pentru refresh pe rute ca `/dashboard`, proiectul include deja `_redirects` si configurare in `netlify.toml`.
+
+### Alte Platforme Frontend
+
+- Build command: `npm run build`
+- Output directory: `dist`
+- Env: `VITE_BACKEND_URL=https://backend-ul-tau`
+
+Backend Node:
+
+- Build command: `npm install && npm run build`
+- Start command: `npm run start:prod`
+- Health check path: `/health`
+- Seteaza `HOST=0.0.0.0`.
+- Seteaza `PORT` conform platformei, daca platforma il injecteaza automat.
+
+## Build Check
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cd backend && npm run build
+cd frontend && npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Pentru pasii completi de publicare pe Netlify + Render + MongoDB Atlas, vezi `DEPLOYMENT.md`.

@@ -21,6 +21,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { Response } from 'express';
 import { GoogleConnectGuard, GOOGLE_CONNECT_PURPOSE } from '../guards/google-connect.guard';
 import { GoogleAuthExceptionFilter } from '../filters/google-auth-exception.filter';
+import { GoogleOAuthConfigGuard } from '../guards/google-oauth-config.guard';
 
 interface GoogleAuthRequest {
   user: {
@@ -79,25 +80,28 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  resendVerification(@Body() dto: ForgotPasswordDto) {
+    return this.authService.resendVerificationEmail(dto);
+  }
+
   @Get('google')
-  @UseGuards(AuthGuard('google'))
-  // Porneste loginul prin Google. acum.
+  @UseGuards(GoogleOAuthConfigGuard, AuthGuard('google'))
   googleLogin() {}
 
   @Get('google/connect')
-  @UseGuards(GoogleConnectGuard)
-  // Porneste conectarea Google Calendar. acum.
+  @UseGuards(GoogleOAuthConfigGuard, GoogleConnectGuard)
   googleConnect() {}
 
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthConfigGuard, AuthGuard('google'))
   @UseFilters(GoogleAuthExceptionFilter)
   async googleCallback(
     @Req() req: GoogleAuthRequest,
     @Query('state') state: string | undefined,
     @Res() res: Response,
   ) {
-    // Gestioneaza raspunsul OAuth Google. acum.
     const frontendUrl = (process.env.FRONTEND_URL ?? '').replace(/\/+$/, '');
 
     if (state) {

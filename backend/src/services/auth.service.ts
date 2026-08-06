@@ -73,6 +73,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    if (!user.isVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email address before signing in. Check your inbox for the verification link.',
+      );
+    }
+
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
@@ -101,6 +107,31 @@ export class AuthService {
     });
 
     return { message: 'Email verified successfully. You can sign in.' };
+  }
+
+  async resendVerificationEmail(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const genericResponse = {
+      message: 'If the account exists and is not verified, a verification email has been sent.',
+    };
+
+    if (!dto.email?.includes('@')) {
+      return genericResponse;
+    }
+
+    const user = await this.usersRepository.findByEmail(dto.email);
+    if (!user || user.isVerified) {
+      return genericResponse;
+    }
+
+    const verificationToken = user.verificationToken ?? randomBytes(32).toString('hex');
+
+    if (!user.verificationToken) {
+      await this.usersRepository.update(user.id, { verificationToken });
+    }
+
+    await this.mailService.sendVerificationEmail(user.email, verificationToken);
+
+    return genericResponse;
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {

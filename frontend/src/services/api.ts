@@ -1,7 +1,14 @@
 import axios from "axios";
 import { clearAuthSession, getAccessToken, isAccessTokenValid } from "./authSession";
 
-export const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3500";
+const configuredApiUrl = import.meta.env.VITE_BACKEND_URL?.trim();
+
+export const API_BASE_URL =
+  configuredApiUrl || (import.meta.env.DEV ? "http://localhost:3500" : "");
+
+if (!API_BASE_URL && import.meta.env.PROD) {
+  throw new Error("Missing VITE_BACKEND_URL. Set it in your hosting provider before building.");
+}
 
 const PUBLIC_AUTH_PATHS = [
   "/auth/login",

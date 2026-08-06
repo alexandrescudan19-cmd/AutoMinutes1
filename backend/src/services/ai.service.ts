@@ -252,7 +252,6 @@ export class AiService {
   }
 
   async processTranscript(processTranscriptDto: ProcessTranscriptDto, user?: AuthenticatedUser) {
-    // Proceseaza transcriptul prin AI. acum.
     const { meetingId, language = 'ro' } = processTranscriptDto;
     const meeting = await this.meetingsRepository.findOne(meetingId);
     if (!meeting) {
@@ -270,9 +269,7 @@ export class AiService {
     await this.meetingsRepository.update(meetingId, { aiStatus: AiStatus.Processing });
 
     try {
-      const aiOutput = await this.ollamaService.generateJson<AiTranscriptResult>(
-        this.buildPrompt(transcript.content, language),
-      );
+      const aiOutput = await this.generateTranscriptResult(transcript.content, language);
 
       const aiResult = await this.aiResultsRepository.create({
         meetingId,
@@ -324,6 +321,146 @@ export class AiService {
         error instanceof Error ? error.message : 'AI processing failed.',
       );
     }
+  }
+
+  private async generateTranscriptResult(
+    transcript: string,
+    language: string,
+  ): Promise<AiTranscriptResult> {
+    const provider = (process.env.AI_PROVIDER ?? 'auto').toLowerCase();
+
+    if (provider === 'fallback' || provider === 'mock') {
+      return this.generateFallbackTranscriptResult(transcript, language);
+    }
+
+    try {
+      return await this.ollamaService.generateJson<AiTranscriptResult>(
+        this.buildPrompt(transcript, language),
+      );
+    } catch (error) {
+      if (provider === 'ollama') {
+        throw error;
+      }
+
+      console.warn(
+        `Ollama is unavailable or returned invalid JSON. Using fallback AI processor. ${
+          error instanceof Error ? error.message : ''
+        }`,
+      );
+
+      return this.generateFallbackTranscriptResult(transcript, language);
+    }
+  }
+
+  private generateFallbackTranscriptResult(
+    transcript: string,
+    language: string,
+  ): AiTranscriptResult {
+    const sentences = this.extractSentences(transcript);
+    const actionItems = this.extractFallbackActionItems(transcript) ?? [];
+    const isEnglish = language.toLowerCase().startsWith('en');
+    const keyPoints = sentences.slice(0, 5);
+
+    return {
+      summary: this.buildFallbackSummary(sentences, isEnglish),
+      keyPoints: keyPoints.length
+        ? keyPoints
+        : [
+            isEnglish
+              ? 'Transcript received for processing.'
+              : 'Transcript primit pentru procesare.',
+          ],
+      decisions: this.extractFallbackDecisions(sentences, isEnglish),
+      followUpNotes: isEnglish
+        ? 'Generated with the fallback processor because the configured AI provider was unavailable.'
+        : 'Generat cu procesorul fallback deoarece providerul AI configurat nu a fost disponibil.',
+      meetingStatistics: {
+        participantCount: this.extractSpeakerCount(transcript),
+        actionItemCount: actionItems.length,
+        processingStatus: AiStatus.Completed,
+      },
+      actionItems,
+    };
+  }
+
+  private buildFallbackSummary(sentences: string[], isEnglish: boolean): string {
+    if (!sentences.length) {
+      return isEnglish
+        ? 'The transcript was processed, but no clear discussion content was detected.'
+        : 'Transcriptul a fost procesat, dar nu a fost detectat continut clar de discutie.';
+    }
+
+    const intro = isEnglish
+      ? 'Fallback summary based on the transcript:'
+      : 'Rezumat fallback pe baza transcriptului:';
+    return `${intro} ${sentences.slice(0, 3).join(' ')}`;
+  }
+
+  private extractSentences(transcript: string): string[] {
+    return transcript
+      .replace(/\r/g, '\n')
+      .split(/(?<=[.!?])\s+|\n+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length > 10)
+      .slice(0, 20);
+  }
+
+  private extractFallbackActionItems(transcript: string): AiTranscriptResult['actionItems'] {
+    const actionPatterns =
+      /\b(trebuie|de făcut|de facut|voi|o sa|să|sa|please|can you|could you|should|we need|let's|i will|i'll)\b/i;
+
+    return transcript
+      .replace(/\r/g, '\n')
+      .split(/\n+|(?<=[.!?])\s+/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 8 && actionPatterns.test(line))
+      .slice(0, 12)
+      .map((line) => ({
+        task: this.cleanSpeakerPrefix(line),
+        responsiblePerson: this.extractResponsiblePerson(line),
+        status: ActionItemStatus.Pending,
+        confidenceScore: 0.55,
+      }));
+  }
+
+  private extractFallbackDecisions(sentences: string[], isEnglish: boolean): string[] {
+    const decisionPatterns = /\b(decis|decizie|stabilit|aprobat|agreed|decided|approved)\b/i;
+    const decisions = sentences.filter((sentence) => decisionPatterns.test(sentence)).slice(0, 5);
+
+    if (decisions.length) {
+      return decisions;
+    }
+
+    return [
+      isEnglish
+        ? 'No explicit decisions were detected by the fallback processor.'
+        : 'Nu au fost detectate decizii explicite de procesorul fallback.',
+    ];
+  }
+
+  private extractSpeakerCount(transcript: string): number | undefined {
+    const speakers = new Set<string>();
+    for (const line of transcript.split(/\n+/)) {
+      const match = line.trim().match(/^([A-ZĂÂÎȘȚA-Z][\wăâîșțĂÂÎȘȚ .'-]{1,40}):/i);
+      if (match?.[1]) {
+        speakers.add(match[1].trim().toLowerCase());
+      }
+    }
+
+    return speakers.size || undefined;
+  }
+
+  private extractResponsiblePerson(line: string): string {
+    const speakerMatch = line.match(/^([^:]{2,40}):/);
+    if (speakerMatch?.[1]) {
+      return speakerMatch[1].trim();
+    }
+
+    return 'Nealocat';
+  }
+
+  private cleanSpeakerPrefix(line: string): string {
+    return line.replace(/^([^:]{2,40}):\s*/, '').trim();
   }
 
   private async resolveTranscript(processTranscriptDto: ProcessTranscriptDto) {

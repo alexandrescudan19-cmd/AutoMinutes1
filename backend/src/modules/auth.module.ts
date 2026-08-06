@@ -10,6 +10,7 @@ import { CryptoModule } from './crypto.module';
 import { MailService } from '@services/mail.service';
 import { GoogleStrategy } from '@services/google.strategy';
 import { GoogleConnectGuard } from '../guards/google-connect.guard';
+import { GoogleOAuthConfigGuard } from '../guards/google-oauth-config.guard';
 
 @Module({
   imports: [
@@ -26,6 +27,13 @@ import { GoogleConnectGuard } from '../guards/google-connect.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, MailService, GoogleStrategy, GoogleConnectGuard],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    MailService,
+    GoogleStrategy,
+    GoogleConnectGuard,
+    GoogleOAuthConfigGuard,
+  ],
 })
 export class AuthModule {}
