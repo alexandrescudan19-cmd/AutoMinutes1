@@ -54,7 +54,7 @@ export default function FilterPill({
     value === defaultValue ? label : `${label}: ${selected?.label ?? value}`;
 
   return (
-    <div className={`relative shrink-0 ${width}`} ref={containerRef}>
+    <div className={`relative w-full min-w-0 min-[420px]:w-auto min-[420px]:shrink-0 ${width}`} ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}

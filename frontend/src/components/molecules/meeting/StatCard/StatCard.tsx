@@ -19,12 +19,12 @@ const accents: Record<Accent, string> = {
 
 export default function StatCard({ label, value, accent = 'gray', icon }: StatCardProps) {
   return (
-    <Card className="flex-1">
+    <Card className="min-w-0">
       <div className="flex items-center gap-3">
         {icon ?? <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accents[accent]}`} aria-hidden="true" />}
-        <div>
+        <div className="min-w-0">
           <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+          <p className="break-words text-sm text-gray-500 dark:text-gray-400">{label}</p>
         </div>
       </div>
     </Card>

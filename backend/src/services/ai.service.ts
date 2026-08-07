@@ -17,7 +17,7 @@ import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
 import { TranscriptsRepository } from '../repositories/transcripts.repository';
 import { AuthenticatedUser } from './meetings.service';
-import { OllamaService } from './ollama.service';
+import { AiProviderService } from './ai-provider.service';
 
 interface AiTranscriptResult {
   summary: string;
@@ -47,7 +47,7 @@ export interface ActionItemListItem extends ActionItem {
 @Injectable()
 export class AiService {
   constructor(
-    private readonly ollamaService: OllamaService,
+    private readonly aiProviderService: AiProviderService,
     private readonly meetingsRepository: MeetingsRepository,
     private readonly transcriptsRepository: TranscriptsRepository,
     private readonly aiResultsRepository: AiResultsRepository,
@@ -57,7 +57,7 @@ export class AiService {
 
   getStatus() {
     // Returneaza starea serviciului AI. acum.
-    return { status: 'ok', service: 'ai-transcript', ollama: this.ollamaService.getInfo() };
+    return { status: 'ok', service: 'ai-transcript', ai: this.aiProviderService.getInfo() };
   }
 
   async getResult(aiResultId: string, user: AuthenticatedUser) {
@@ -334,16 +334,16 @@ export class AiService {
     }
 
     try {
-      return await this.ollamaService.generateJson<AiTranscriptResult>(
+      return await this.aiProviderService.generateJson<AiTranscriptResult>(
         this.buildPrompt(transcript, language),
       );
     } catch (error) {
-      if (provider === 'ollama') {
+      if (provider === 'ollama' || provider === 'openai' || provider === 'openai-compatible') {
         throw error;
       }
 
       console.warn(
-        `Ollama is unavailable or returned invalid JSON. Using fallback AI processor. ${
+        `Configured AI provider is unavailable or returned invalid JSON. Using fallback AI processor. ${
           error instanceof Error ? error.message : ''
         }`,
       );

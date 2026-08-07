@@ -11,6 +11,7 @@ import { AiResultsRepository } from '../repositories/ai-results.repository';
 import { InvitationsRepository } from '../repositories/invitations.repository';
 import { MeetingsRepository } from '../repositories/meetings.repository';
 import { TranscriptsRepository } from '../repositories/transcripts.repository';
+import { AiProviderService } from '../services/ai-provider.service';
 import { AiService } from '../services/ai.service';
 import { OllamaService } from '../services/ollama.service';
 
@@ -27,6 +28,7 @@ import { OllamaService } from '../services/ollama.service';
   controllers: [AiController],
   providers: [
     AiService,
+    AiProviderService,
     OllamaService,
     MeetingsRepository,
     TranscriptsRepository,

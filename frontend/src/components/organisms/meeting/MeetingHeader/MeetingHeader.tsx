@@ -16,7 +16,7 @@ export default function MeetingsHeader({ stats }: MeetingsHeaderProps) {
     <div className="flex flex-col gap-5">
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Meetings</h1>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total meetings" value={stats.total} accent="blue" />
         <StatCard label="Processing" value={stats.processing} accent="amber" />
         <StatCard label="Completed" value={stats.completed} accent="green" />

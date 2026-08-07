@@ -102,7 +102,7 @@ export class AuthController {
     @Query('state') state: string | undefined,
     @Res() res: Response,
   ) {
-    const frontendUrl = (process.env.FRONTEND_URL ?? '').replace(/\/+$/, '');
+    const frontendUrl = this.getFrontendUrl();
 
     if (state) {
       try {
@@ -135,5 +135,12 @@ export class AuthController {
   googleDisconnect(@Req() req: AuthenticatedRequest) {
     // Deconecteaza contul Google curent. acum.
     return this.authService.disconnectGoogleAccount(req.user.userId);
+  }
+
+  private getFrontendUrl(): string {
+    return (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+      .split(',')[0]
+      .trim()
+      .replace(/\/+$/, '');
   }
 }

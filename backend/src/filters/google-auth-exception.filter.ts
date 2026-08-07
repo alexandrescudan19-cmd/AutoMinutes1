@@ -8,7 +8,10 @@ export class GoogleAuthExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
-    const frontendUrl = (process.env.FRONTEND_URL ?? '').replace(/\/+$/, '');
+    const frontendUrl = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+      .split(',')[0]
+      .trim()
+      .replace(/\/+$/, '');
     const isConnectIntent = Boolean(request.query.state);
 
     const redirectTarget = isConnectIntent

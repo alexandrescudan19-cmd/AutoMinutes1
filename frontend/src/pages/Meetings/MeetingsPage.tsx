@@ -68,7 +68,7 @@ function DatePill({
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="relative shrink-0">
+    <div className="relative w-full min-[420px]:w-auto min-[420px]:shrink-0">
       <button
         type="button"
         onClick={() => inputRef.current?.showPicker?.()}
@@ -85,7 +85,7 @@ function DatePill({
         aria-label={ariaLabel}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-40 rounded-full border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-700 transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:[color-scheme:dark]"
+        className="h-10 w-full rounded-full border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-700 transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:[color-scheme:dark] min-[420px]:w-40"
       />
     </div>
   );
@@ -110,6 +110,7 @@ export default function MeetingsPage() {
     null,
   );
   const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearchParamsRef = useRef(searchParams);
   const didMountClientFilters = useRef(false);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
@@ -149,20 +150,21 @@ export default function MeetingsPage() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      const search = searchParams.get("search");
-      const status = searchParams.get("status") as MeetingStatus | null;
-      const aiStatus = searchParams.get("aiStatus") as AiStatus | null;
-      const sort = searchParams.get("sort") as MeetingHistorySort | null;
-      const pageParam = searchParams.get("page");
+      const initialSearchParams = initialSearchParamsRef.current;
+      const search = initialSearchParams.get("search");
+      const status = initialSearchParams.get("status") as MeetingStatus | null;
+      const aiStatus = initialSearchParams.get("aiStatus") as AiStatus | null;
+      const sort = initialSearchParams.get("sort") as MeetingHistorySort | null;
+      const pageParam = initialSearchParams.get("page");
       const initialPage =
         pageParam && Number(pageParam) > 0 ? Number(pageParam) : 1;
 
-      const initialDateFrom = searchParams.get("dateFrom") ?? "";
-      const initialDateTo = searchParams.get("dateTo") ?? "";
-      const initialHasActionItems = searchParams.get("hasActionItems") === "1";
+      const initialDateFrom = initialSearchParams.get("dateFrom") ?? "";
+      const initialDateTo = initialSearchParams.get("dateTo") ?? "";
+      const initialHasActionItems = initialSearchParams.get("hasActionItems") === "1";
       const initialHasClientFilters =
         !!initialDateFrom || !!initialDateTo || initialHasActionItems;
-      const initialMeetingId = searchParams.get("meeting");
+      const initialMeetingId = initialSearchParams.get("meeting");
       if (initialMeetingId) setSelectedMeetingId(initialMeetingId);
 
       useMeetingsStore.setState((state) => ({
@@ -190,8 +192,8 @@ export default function MeetingsPage() {
       setOnlyWithActionItems(initialHasActionItems);
       if (initialHasClientFilters) setClientPage(initialPage);
       if (
-        searchParams.get("status") ||
-        searchParams.get("aiStatus") ||
+        initialSearchParams.get("status") ||
+        initialSearchParams.get("aiStatus") ||
         initialHasClientFilters
       ) {
         setIsFilterPanelOpen(true);
@@ -201,7 +203,7 @@ export default function MeetingsPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [fetchMeetings]);
 
   useEffect(() => {
     if (!didMountClientFilters.current) return;
@@ -213,7 +215,7 @@ export default function MeetingsPage() {
     });
     setClientPage(1);
     void fetchMeetings();
-  }, [hasClientSideFilters]);
+  }, [fetchMeetings, hasClientSideFilters]);
 
   useEffect(() => {
     // Wait until the deferred initial-load callback above has actually run (and
@@ -245,6 +247,7 @@ export default function MeetingsPage() {
     onlyWithActionItems,
     effectivePage,
     selectedMeetingId,
+    setSearchParams,
   ]);
 
   const activeSecondaryCount =
@@ -268,9 +271,9 @@ export default function MeetingsPage() {
 
         <Card>
           <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-center">
               <SearchBar
-                className="min-w-[200px] flex-1"
+                className="w-full min-w-0 min-[420px]:min-w-[200px] min-[420px]:flex-1"
                 value={filters.search}
                 onChange={(nextQuery) => setFilters({ search: nextQuery })}
               />
@@ -278,7 +281,7 @@ export default function MeetingsPage() {
               <button
                 type="button"
                 onClick={() => setIsFilterPanelOpen((v) => !v)}
-                className={`flex h-10 shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors ${
+                className={`flex h-10 w-full items-center justify-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors min-[420px]:w-auto min-[420px]:shrink-0 ${
                   isFilterPanelOpen || activeSecondaryCount > 0
                     ? "border-brand bg-brand/10 text-brand"
                     : "border-gray-200 text-gray-700 hover:border-gray-300 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-600"
@@ -298,7 +301,7 @@ export default function MeetingsPage() {
                 value={filters.sort}
                 defaultValue="newest"
                 options={SORT_PILL_OPTIONS}
-                width="w-56"
+                width="min-[420px]:w-56"
                 onChange={(value) =>
                   setFilters({ sort: value as MeetingHistorySort })
                 }
@@ -308,7 +311,7 @@ export default function MeetingsPage() {
             {(activeSecondaryCount > 0 || isFilterPanelOpen) && (
               <div className="flex flex-col gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
                 {activeSecondaryCount > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-center">
                     {filters.status && (
                       <Chip
                         label={`Status: ${filters.status}`}
@@ -350,13 +353,13 @@ export default function MeetingsPage() {
                 )}
 
                 {isFilterPanelOpen && (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-center">
                     <FilterPill
                       label="Status"
                       value={filters.status ?? ""}
                       defaultValue=""
                       options={STATUS_PILL_OPTIONS}
-                      width="w-48"
+                      width="min-[420px]:w-48"
                       onChange={(value) =>
                         setFilters({
                           status: (value || undefined) as
@@ -370,7 +373,7 @@ export default function MeetingsPage() {
                       value={filters.aiStatus ?? ""}
                       defaultValue=""
                       options={AI_STATUS_PILL_OPTIONS}
-                      width="w-48"
+                      width="min-[420px]:w-48"
                       onChange={(value) =>
                         setFilters({
                           aiStatus: (value || undefined) as
@@ -392,7 +395,7 @@ export default function MeetingsPage() {
                     <button
                       type="button"
                       onClick={() => setOnlyWithActionItems((v) => !v)}
-                      className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors ${
+                      className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors min-[420px]:w-auto min-[420px]:shrink-0 ${
                         onlyWithActionItems
                           ? "border-brand bg-brand/10 text-brand"
                           : "border-gray-200 text-gray-700 hover:border-gray-300 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-600"

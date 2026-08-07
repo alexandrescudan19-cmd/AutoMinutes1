@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
+import { isAxiosError } from "axios";
 import {
   createMeeting as createMeetingRequest,
   deleteMeeting as deleteMeetingRequest,
@@ -24,6 +25,14 @@ interface MeetingsFilters {
 }
 
 const EMPTY_STATS: MeetingHistoryStats = { total: 0, processing: 0, completed: 0, openActionItems: 0 };
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message ?? fallback;
+  }
+
+  return fallback;
+}
 
 interface MeetingsState {
   meetings: MeetingHistoryItem[];
@@ -96,8 +105,8 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
       toast.success("Meeting created.");
       await get().fetchMeetings();
       return { ...meeting, actionItemsCount: 0 };
-    } catch {
-      toast.error("Couldn't create the meeting.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Couldn't create the meeting."));
       return undefined;
     }
   },
@@ -107,8 +116,8 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
       await updateMeetingRequest(id, input);
       toast.success("Meeting updated.");
       await get().fetchMeetings();
-    } catch {
-      toast.error("Couldn't update the meeting.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Couldn't update the meeting."));
     }
   },
 
@@ -117,8 +126,8 @@ export const useMeetingsStore = create<MeetingsState>((set, get) => ({
       await deleteMeetingRequest(id);
       toast.success("Meeting deleted.");
       await get().fetchMeetings();
-    } catch {
-      toast.error("Couldn't delete the meeting.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Couldn't delete the meeting."));
     }
   },
 }));

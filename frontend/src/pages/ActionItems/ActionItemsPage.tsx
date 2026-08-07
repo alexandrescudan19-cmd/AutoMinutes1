@@ -78,12 +78,19 @@ export default function ActionItemsPage() {
     [visibleActionItems],
   );
 
-  const activeGroup = cards.find((group) => group.key === activeCard) ?? null;
+  const activeGroup = useMemo(
+    () => cards.find((group) => group.key === activeCard) ?? null,
+    [activeCard, cards],
+  );
   const pageCount = activeGroup ? Math.max(1, Math.ceil(activeGroup.items.length / PAGE_SIZE)) : 1;
   const effectivePage = Math.min(page, pageCount);
-  const pagedItems = activeGroup
-    ? activeGroup.items.slice((effectivePage - 1) * PAGE_SIZE, effectivePage * PAGE_SIZE)
-    : [];
+  const pagedItems = useMemo(
+    () =>
+      activeGroup
+        ? activeGroup.items.slice((effectivePage - 1) * PAGE_SIZE, effectivePage * PAGE_SIZE)
+        : [],
+    [activeGroup, effectivePage],
+  );
 
   const hasActiveFilters = assigneeFilter !== "all";
 
@@ -172,17 +179,22 @@ export default function ActionItemsPage() {
     const item = actionItems.find((ai) => ai.id === itemId);
     if (!item) return;
 
-    setAssigneeFilter("all");
     const groupKey: CardKey = CARD_GROUPS.some((group) => group.key === item.status)
       ? (item.status as CardKey)
       : "all";
-    setActiveCard(groupKey);
 
     const groupItems =
       groupKey === "all" ? actionItems : actionItems.filter((ai) => ai.status === groupKey);
     const index = groupItems.findIndex((ai) => ai.id === itemId);
-    setPage(index >= 0 ? Math.floor(index / PAGE_SIZE) + 1 : 1);
-    setHighlightId(itemId);
+
+    const timeoutId = window.setTimeout(() => {
+      setAssigneeFilter("all");
+      setActiveCard(groupKey);
+      setPage(index >= 0 ? Math.floor(index / PAGE_SIZE) + 1 : 1);
+      setHighlightId(itemId);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [actionItems, searchParams]);
 
   useEffect(() => {

@@ -1,4 +1,5 @@
-import StatusBadge, { getStatusDotColor } from '../../common/StatusBadge/StatusBadge.tsx';
+import StatusBadge from '../../common/StatusBadge/StatusBadge.tsx';
+import { getStatusDotColor } from '../../common/StatusBadge/statusBadgeUtils.ts';
 import { formatDateTime } from '../../../../utils/date.ts';
 import type { MeetingHistoryItem } from '../../../../types';
 
@@ -17,17 +18,19 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
       className="block w-full min-w-0 border-b border-gray-100 text-left transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60"
     >
       {/* Mobile: single compact line - status dot, name, date */}
-      <div className="flex min-w-0 items-center gap-2 px-4 py-3 sm:hidden">
+      <div className="flex min-w-0 items-start gap-2 px-4 py-3 sm:hidden">
         <span
-          className={`h-2 w-2 shrink-0 rounded-full ${getStatusDotColor(meeting.status)}`}
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${getStatusDotColor(meeting.status)}`}
           aria-hidden="true"
         />
-        <p className="min-w-0 flex-1 truncate font-medium text-gray-900 dark:text-gray-100">
-          {meeting.title}
-        </p>
-        <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
-          {formatDateTime(meeting.startDateTime)}
-        </span>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 break-words font-medium text-gray-900 dark:text-gray-100">
+            {meeting.title}
+          </p>
+          <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+            {formatDateTime(meeting.startDateTime)}
+          </span>
+        </div>
       </div>
 
       {/* Tablet/desktop: full detail grid */}
