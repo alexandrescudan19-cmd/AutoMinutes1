@@ -18,6 +18,13 @@ function parseOrigins(value?: string) {
     .filter(Boolean);
 }
 
+function isTrustedHostedOrigin(origin: string) {
+  return (
+    /^https:\/\/[a-z0-9-]+\.euw\.devtunnels\.ms$/i.test(origin) ||
+    /^https:\/\/[a-z0-9-]+\.netlify\.app$/i.test(origin)
+  );
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
@@ -36,7 +43,7 @@ async function bootstrap() {
         allowAnyOrigin ||
         !origin ||
         allowedOrigins.has(origin.replace(/\/+$/, '')) ||
-        /^https:\/\/[a-z0-9-]+\.euw\.devtunnels\.ms$/i.test(origin)
+        isTrustedHostedOrigin(origin)
       ) {
         callback(null, true);
         return;

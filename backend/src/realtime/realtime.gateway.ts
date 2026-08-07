@@ -38,6 +38,13 @@ function getAllowedOrigins() {
   };
 }
 
+function isTrustedHostedOrigin(origin: string) {
+  return (
+    /^https:\/\/[a-z0-9-]+\.euw\.devtunnels\.ms$/i.test(origin) ||
+    /^https:\/\/[a-z0-9-]+\.netlify\.app$/i.test(origin)
+  );
+}
+
 @WebSocketGateway({
   cors: {
     origin(origin, callback) {
@@ -46,7 +53,7 @@ function getAllowedOrigins() {
         allowAnyOrigin ||
         !origin ||
         origins.has(origin.replace(/\/+$/, '')) ||
-        /^https:\/\/[a-z0-9-]+\.euw\.devtunnels\.ms$/i.test(origin)
+        isTrustedHostedOrigin(origin)
       ) {
         callback(null, true);
         return;

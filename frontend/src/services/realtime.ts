@@ -38,6 +38,8 @@ export function getRealtimeSocket() {
     auth: { token },
     transports: ["websocket", "polling"],
     autoConnect: true,
+    reconnectionAttempts: 3,
+    timeout: 10000,
   });
 
   return socket;
