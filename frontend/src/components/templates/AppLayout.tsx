@@ -8,7 +8,6 @@ import {
   FiMenu,
   FiPlus,
   FiSearch,
-  FiShield,
   FiUserCheck,
   FiX,
 } from "react-icons/fi";
@@ -100,11 +99,6 @@ const NAV_ITEMS = [
     label: "Search",
     to: "/search",
     icon: <FiSearch aria-hidden="true" size={18} />,
-  },
-  {
-    label: "Admin",
-    to: "/admin",
-    icon: <FiShield aria-hidden="true" size={18} />,
   },
 ];
 

@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { FiDownload, FiEdit2, FiLink, FiMessageSquare, FiTrash2, FiVideo } from "react-icons/fi";
+import {
+  FiDownload,
+  FiEdit2,
+  FiLink,
+  FiMessageSquare,
+  FiTrash2,
+  FiUploadCloud,
+  FiVideo,
+} from "react-icons/fi";
 import toast from "react-hot-toast";
 import Modal from "../../common/Modal/Modal.tsx";
 import StatusBadge from "../../common/StatusBadge/StatusBadge.tsx";
@@ -12,6 +20,7 @@ import {
   addMeetingComment,
   createMeetingShareLink,
   getMeeting,
+  importMeetTranscript,
   listMeetingComments,
 } from "../../../../services/meetings";
 import { useMeetingsStore } from "../../../../stores/meetingsStore";
@@ -54,6 +63,7 @@ export default function MeetingDetailsModal({
   const [comments, setComments] = useState<MeetingComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isCommenting, setIsCommenting] = useState(false);
+  const [isImportingTranscript, setIsImportingTranscript] = useState(false);
 
   const refetchMeeting = async (id: string) => {
     setIsLoading(true);
@@ -95,6 +105,21 @@ export default function MeetingDetailsModal({
     const { url } = await createMeetingShareLink(meeting.id);
     await navigator.clipboard.writeText(url);
     toast.success("Share link copied.");
+  };
+
+  const handleImportMeetTranscript = async () => {
+    if (!meeting) return;
+    setIsImportingTranscript(true);
+    try {
+      await importMeetTranscript(meeting.id);
+      toast.success("Transcript imported from Google Meet.");
+      await refetchMeeting(meeting.id);
+      setActiveTab("ai");
+    } catch {
+      toast.error("Couldn't import the Google Meet transcript yet.");
+    } finally {
+      setIsImportingTranscript(false);
+    }
   };
 
   const saveComment = async () => {
@@ -209,7 +234,14 @@ export default function MeetingDetailsModal({
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2">
                     <StatusBadge status={meeting.status} />
-                    <StatusBadge status={meeting.aiStatus} />
+                    <StatusBadge
+                      status={meeting.aiStatus}
+                      label={
+                        meeting.aiStatus.toLowerCase() === "completed"
+                          ? "Transcript ready"
+                          : undefined
+                      }
+                    />
                   </div>
 
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -230,15 +262,26 @@ export default function MeetingDetailsModal({
                   </p>
 
                   {meeting.googleMeetLink && (
-                    <a
-                      href={meeting.googleMeetLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex w-fit items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-medium text-brand hover:bg-brand/10 dark:hover:bg-brand/20"
-                    >
-                      <FiVideo aria-hidden="true" />
-                      Join on Google Meet
-                    </a>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={meeting.googleMeetLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex w-fit items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-medium text-brand hover:bg-brand/10 dark:hover:bg-brand/20"
+                      >
+                        <FiVideo aria-hidden="true" />
+                        Join on Google Meet
+                      </a>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        leftIcon={<FiUploadCloud aria-hidden="true" />}
+                        isLoading={isImportingTranscript}
+                        onClick={() => void handleImportMeetTranscript()}
+                      >
+                        Import transcript
+                      </Button>
+                    </div>
                   )}
 
                   <div className="flex flex-wrap gap-2">

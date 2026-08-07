@@ -19,10 +19,11 @@ const STATUS_MAP: Record<string, { variant: BadgeVariant; label: string }> = {
 
 export interface StatusBadgeProps {
   status: string;
+  label?: string;
   className?: string;
 }
 
-export default function StatusBadge({ status, className }: StatusBadgeProps) {
+export default function StatusBadge({ status, label, className }: StatusBadgeProps) {
 
   const key = status.trim().toLowerCase();
   const config = STATUS_MAP[key];
@@ -30,8 +31,8 @@ export default function StatusBadge({ status, className }: StatusBadgeProps) {
   // daca statusul e cunoscut -> folosim culoarea si textul din harta
   // daca NU e cunoscut -> badge neutru, cu textul brut (nu crapa)
   if (!config) {
-    return <Badge variant="neutral" className={className}>{status}</Badge>;
+    return <Badge variant="neutral" className={className}>{label ?? status}</Badge>;
   }
 
-  return <Badge variant={config.variant} className={className}>{config.label}</Badge>;
+  return <Badge variant={config.variant} className={className}>{label ?? config.label}</Badge>;
 }
