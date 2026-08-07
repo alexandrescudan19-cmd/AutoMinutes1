@@ -1,18 +1,24 @@
 import { api } from "./api";
-
-export interface CurrentUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  themePreference?: "light" | "dark" | null;
-  [key: string]: unknown;
-}
+import type { StoredUserProfile } from "../types";
 
 export function getMe() {
-  return api.get<CurrentUser>("/users/me").then((res) => res.data);
+  return api.get<StoredUserProfile>("/users/me").then((res) => res.data);
+}
+
+export function updateMe(input: Partial<Pick<StoredUserProfile, "firstName" | "lastName" | "themePreference">>) {
+  return api.patch<StoredUserProfile>("/users/me", input).then((res) => res.data);
 }
 
 export function updateThemePreference(themePreference: "light" | "dark") {
-  return api.patch<CurrentUser>("/users/me", { themePreference }).then((res) => res.data);
+  return updateMe({ themePreference });
+}
+
+export function getAdminStats() {
+  return api
+    .get<{ users: number; verifiedUsers: number; googleConnectedUsers: number }>("/users/admin/stats")
+    .then((res) => res.data);
+}
+
+export function listAdminUsers() {
+  return api.get<StoredUserProfile[]>("/users/admin/users").then((res) => res.data);
 }

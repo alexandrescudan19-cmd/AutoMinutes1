@@ -10,6 +10,7 @@ import { AppLayout } from "../../components/templates";
 import { createActionItem, listActionItems } from "../../services/actionItems";
 import { listMeetings } from "../../services/meetings";
 import type { ActionItemListItem, ActionItemStatus, Meeting } from "../../types";
+import { useRealtimeEvent } from "../../hooks/useRealtime";
 
 type CardKey = "all" | ActionItemStatus;
 
@@ -106,6 +107,10 @@ export default function ActionItemsPage() {
       setIsLoading(false);
     }
   };
+
+  useRealtimeEvent("actionItems.changed", () => {
+    void loadActionItems();
+  });
 
   const loadMeetings = async () => {
     try {

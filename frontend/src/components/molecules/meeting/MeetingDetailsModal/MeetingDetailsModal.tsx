@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { FiEdit2, FiTrash2, FiVideo } from "react-icons/fi";
+import { FiDownload, FiEdit2, FiLink, FiMessageSquare, FiTrash2, FiVideo } from "react-icons/fi";
+import toast from "react-hot-toast";
 import Modal from "../../common/Modal/Modal.tsx";
 import StatusBadge from "../../common/StatusBadge/StatusBadge.tsx";
 import ConfirmDialog from "../../common/ConfirmDialog/ConfirmDialog.tsx";
@@ -7,15 +8,20 @@ import { Button } from "../../../atoms";
 import MeetingForm from "../../../organisms/meeting/MeetingForm/MeetingForm.tsx";
 import MeetingAttendeesPanel from "../../../organisms/attendee/MeetingAttendeesPanel/MeetingAttendeesPanel.tsx";
 import AiResultsPanel from "../../../organisms/ai/AiResultsPanel/AiResultsPanel.tsx";
-import { getMeeting } from "../../../../services/meetings";
+import {
+  addMeetingComment,
+  createMeetingShareLink,
+  getMeeting,
+  listMeetingComments,
+} from "../../../../services/meetings";
 import { useMeetingsStore } from "../../../../stores/meetingsStore";
 import {
   formatDateRange,
   toDateTimeLocalValue,
 } from "../../../../utils/date.ts";
-import type { Meeting } from "../../../../types";
+import type { Meeting, MeetingComment } from "../../../../types";
 
-type Tab = "overview" | "attendees" | "ai";
+type Tab = "overview" | "attendees" | "ai" | "comments";
 
 export interface MeetingDetailsModalProps {
   meetingId: string | null;
@@ -27,6 +33,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "attendees", label: "Attendees" },
   { key: "ai", label: "Transcript & AI" },
+  { key: "comments", label: "Comments" },
 ];
 
 export default function MeetingDetailsModal({
@@ -44,6 +51,9 @@ export default function MeetingDetailsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [comments, setComments] = useState<MeetingComment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [isCommenting, setIsCommenting] = useState(false);
 
   const refetchMeeting = async (id: string) => {
     setIsLoading(true);
@@ -51,10 +61,51 @@ export default function MeetingDetailsModal({
     try {
       const data = await getMeeting(id);
       setMeeting(data);
+      setComments(await listMeetingComments(id));
     } catch {
       setError("Couldn't load the meeting.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const exportMarkdown = () => {
+    if (!meeting) return;
+    const markdown = [
+      `# ${meeting.title}`,
+      "",
+      `Status: ${meeting.status}`,
+      `AI status: ${meeting.aiStatus}`,
+      `Date: ${formatDateRange(meeting.startDateTime, meeting.endDateTime)}`,
+      "",
+      "## Description",
+      meeting.description || "No description.",
+    ].join("\n");
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${meeting.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-summary.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareMeeting = async () => {
+    if (!meeting) return;
+    const { url } = await createMeetingShareLink(meeting.id);
+    await navigator.clipboard.writeText(url);
+    toast.success("Share link copied.");
+  };
+
+  const saveComment = async () => {
+    if (!meeting || !commentText.trim()) return;
+    setIsCommenting(true);
+    try {
+      await addMeetingComment(meeting.id, commentText);
+      setCommentText("");
+      setComments(await listMeetingComments(meeting.id));
+    } finally {
+      setIsCommenting(false);
     }
   };
 
@@ -190,6 +241,25 @@ export default function MeetingDetailsModal({
                     </a>
                   )}
 
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      leftIcon={<FiDownload aria-hidden="true" />}
+                      onClick={exportMarkdown}
+                    >
+                      Export Markdown
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      leftIcon={<FiLink aria-hidden="true" />}
+                      onClick={() => void shareMeeting()}
+                    >
+                      Share summary
+                    </Button>
+                  </div>
+
                   <div className="flex justify-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
                     <Button
                       type="button"
@@ -223,6 +293,46 @@ export default function MeetingDetailsModal({
                 meeting={meeting}
                 onMeetingChanged={() => void refetchMeeting(meeting.id)}
               />
+            )}
+
+            {activeTab === "comments" && (
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    rows={3}
+                    className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    placeholder="Write a comment..."
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      leftIcon={<FiMessageSquare />}
+                      isLoading={isCommenting}
+                      disabled={!commentText.trim()}
+                      onClick={() => void saveComment()}
+                    >
+                      Comment
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {comment.authorName}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-300">
+                        {comment.message}
+                      </p>
+                    </div>
+                  ))}
+                  {comments.length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

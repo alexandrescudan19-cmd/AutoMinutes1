@@ -5,12 +5,16 @@ import { AppLayout } from "../../components/templates";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
 import { api, API_BASE_URL } from "../../services/api";
 import { clearAuthSession, getAccessToken, isAccessTokenValid } from "../../services/authSession";
+import { getMe, updateMe } from "../../services/users";
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { connected, loading, refetch } = useGoogleConnectionStatus();
   const [message, setMessage] = useState("");
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -26,6 +30,26 @@ export default function SettingsPage() {
 
     return () => window.clearTimeout(timeoutId);
   }, [searchParams, setSearchParams, refetch]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(async () => {
+      const user = await getMe();
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  const saveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      const user = await updateMe({ firstName, lastName });
+      localStorage.setItem("user", JSON.stringify(user));
+      setMessage("Profile updated.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleConnect = () => {
     const token = getAccessToken();
@@ -53,6 +77,32 @@ export default function SettingsPage() {
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h1>
 
         {message && <p className="text-sm text-brand">{message}</p>}
+
+        <Card title="Profile">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
+              First name
+              <input
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
+              Last name
+              <input
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              />
+            </label>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button isLoading={isSavingProfile} onClick={() => void saveProfile()}>
+              Save profile
+            </Button>
+          </div>
+        </Card>
 
         <Card title="Google Calendar">
           <div className="flex items-center justify-between gap-4">

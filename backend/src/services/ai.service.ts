@@ -18,6 +18,7 @@ import { MeetingsRepository } from '../repositories/meetings.repository';
 import { TranscriptsRepository } from '../repositories/transcripts.repository';
 import { AuthenticatedUser } from './meetings.service';
 import { AiProviderService } from './ai-provider.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 interface AiTranscriptResult {
   summary: string;
@@ -53,6 +54,7 @@ export class AiService {
     private readonly aiResultsRepository: AiResultsRepository,
     private readonly actionItemsRepository: ActionItemsRepository,
     private readonly invitationsRepository: InvitationsRepository,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   getStatus() {
@@ -166,6 +168,7 @@ export class AiService {
       status: dto.status ?? ActionItemStatus.Pending,
     });
 
+    this.emitActionItemsChanged(meeting, 'actionItem.created', { actionItem });
     return this.withMeeting(actionItem, meeting);
   }
 
@@ -179,7 +182,7 @@ export class AiService {
     if (!actionItem) {
       throw new NotFoundException(`Action item #${id} not found`);
     }
-    await this.resolveActionItemContext(actionItem, user);
+    const { meeting } = await this.resolveActionItemContext(actionItem, user);
 
     const { dueDate, ...rest } = dto;
     const updated = await this.actionItemsRepository.update(id, {
@@ -192,6 +195,7 @@ export class AiService {
     if (!updated) {
       throw new NotFoundException(`Action item #${id} not found`);
     }
+    this.emitActionItemsChanged(meeting, 'actionItem.updated', { actionItem: updated });
     return updated;
   }
 
@@ -201,7 +205,7 @@ export class AiService {
     if (!actionItem) {
       throw new NotFoundException(`Action item #${id} not found`);
     }
-    const { aiResult } = await this.resolveActionItemContext(actionItem, user);
+    const { aiResult, meeting } = await this.resolveActionItemContext(actionItem, user);
 
     const removed = await this.actionItemsRepository.remove(id);
     if (!removed) {
@@ -214,6 +218,7 @@ export class AiService {
       });
     }
 
+    this.emitActionItemsChanged(meeting, 'actionItem.deleted', { actionItemId: id });
     return removed;
   }
 
@@ -267,6 +272,10 @@ export class AiService {
     }
 
     await this.meetingsRepository.update(meetingId, { aiStatus: AiStatus.Processing });
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'ai.processing', { meetingId });
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.updated', {
+      meeting: { ...meeting, aiStatus: AiStatus.Processing },
+    });
 
     try {
       const aiOutput = await this.generateTranscriptResult(transcript.content, language);
@@ -309,14 +318,36 @@ export class AiService {
         aiResultId: aiResult.id,
       });
 
-      return {
+      const result = {
         meetingId,
         transcript,
         aiResult: updatedAiResult ?? aiResult,
         actionItems,
       };
+
+      this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'ai.completed', result);
+      this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'actionItems.changed', {
+        meetingId,
+      });
+      this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.updated', {
+        meeting: {
+          ...meeting,
+          aiStatus: AiStatus.Completed,
+          transcriptId: transcript.id,
+          aiResultId: aiResult.id,
+        },
+      });
+
+      return result;
     } catch (error) {
       await this.meetingsRepository.update(meetingId, { aiStatus: AiStatus.Failed });
+      this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'ai.failed', {
+        meetingId,
+        message: error instanceof Error ? error.message : 'AI processing failed.',
+      });
+      this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.updated', {
+        meeting: { ...meeting, aiStatus: AiStatus.Failed },
+      });
       throw new ServiceUnavailableException(
         error instanceof Error ? error.message : 'AI processing failed.',
       );
@@ -484,6 +515,16 @@ export class AiService {
     }
 
     throw new BadRequestException('Trimite transcriptId sau transcript.');
+  }
+
+  private emitActionItemsChanged(
+    meeting: Meeting,
+    event: 'actionItem.created' | 'actionItem.updated' | 'actionItem.deleted',
+    payload: Record<string, unknown>,
+  ) {
+    const ownerId = meeting.ownerId?.toString();
+    this.realtimeService.emitToUser(ownerId, event, { meetingId: meeting.id, ...payload });
+    this.realtimeService.emitToUser(ownerId, 'actionItems.changed', { meetingId: meeting.id });
   }
 
   private buildPrompt(transcript: string, language: string): string {

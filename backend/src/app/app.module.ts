@@ -8,6 +8,7 @@ import { AiModule } from '../modules/ai.module';
 import { AuthModule } from '../modules/auth.module';
 import { AttendeesModule } from '../modules/attendees.module';
 import { UsersModule } from '../modules/users.module';
+import { RealtimeModule } from '../modules/realtime.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { UsersModule } from '../modules/users.module';
     AuthModule,
     AttendeesModule,
     UsersModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

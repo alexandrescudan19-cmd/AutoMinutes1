@@ -22,6 +22,18 @@ export class UsersController {
     return this.usersService.getMe(req.user.userId);
   }
 
+  @ApiOperation({ summary: 'Admin dashboard stats' })
+  @Get('admin/stats')
+  getAdminStats(@Req() req: AuthenticatedRequest) {
+    return this.usersService.getAdminStats(req.user.role);
+  }
+
+  @ApiOperation({ summary: 'Listeaza utilizatorii pentru admin' })
+  @Get('admin/users')
+  listUsers(@Req() req: AuthenticatedRequest) {
+    return this.usersService.listUsers(req.user.role);
+  }
+
   @ApiOperation({ summary: 'Actualizeaza preferintele contului curent (ex: tema)' })
   @Patch('me')
   updateMe(@Body() updateUserDto: UpdateUserDto, @Req() req: AuthenticatedRequest) {

@@ -20,6 +20,7 @@ export interface Meeting {
   attendeeIds: string[];
   invitationIds: string[];
   notificationIds?: string[];
+  shareToken?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -115,6 +116,51 @@ export interface UpdateActionItemInput {
   responsiblePerson?: string;
   dueDate?: string;
   status?: ActionItemStatus;
+}
+
+export interface MeetingComment {
+  id: string;
+  meetingId: string;
+  authorId: string;
+  authorName: string;
+  authorEmail: string;
+  message: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StoredUserProfile {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  isVerified: boolean;
+  themePreference?: "light" | "dark" | null;
+  [key: string]: unknown;
+}
+
+export interface Invitation {
+  id: string;
+  meetingId: string;
+  participantEmail: string;
+  invitationStatus: AttendanceStatus;
+  sentAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  recipientEmail: string;
+  meetingId?: string;
+  isRead: boolean;
+  sentAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateActionItemInput {

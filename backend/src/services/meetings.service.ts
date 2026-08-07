@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { AddMeetingInvitationsDto } from '../dto/meetings/add-meeting-invitations.dto';
 import { UpdateAttendeeDto } from '../dto/attendees/update-attendee.dto';
 import { CreateMeetingDto, CreateMeetingParticipantDto } from '../dto/meetings/create-meeting.dto';
@@ -24,9 +25,11 @@ import { MeetingsRepository } from '../repositories/meetings.repository';
 import { NotificationsRepository } from '../repositories/notifications.repository';
 import { TranscriptsRepository } from '../repositories/transcripts.repository';
 import { UsersRepository } from '../repositories/users.repository';
+import { CommentsRepository } from '../repositories/comments.repository';
 import { GoogleCalendarService } from './google-calendar.service';
 import { GoogleMeetTranscriptService } from './google-meet-transcript.service';
 import { EncryptionService } from './encryption.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 export interface AuthenticatedUser {
   userId: string;
@@ -72,11 +75,13 @@ export class MeetingsService {
     private readonly invitationsRepository: InvitationsRepository,
     private readonly notificationsRepository: NotificationsRepository,
     private readonly transcriptsRepository: TranscriptsRepository,
+    private readonly commentsRepository: CommentsRepository,
     private readonly googleMeetTranscriptService: GoogleMeetTranscriptService,
     private readonly aiResultsRepository: AiResultsRepository,
     private readonly actionItemsRepository: ActionItemsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly encryptionService: EncryptionService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async create(createMeetingDto: CreateMeetingDto, user?: AuthenticatedUser): Promise<Meeting> {
@@ -201,7 +206,12 @@ export class MeetingsService {
       transcriptId: createMeetingDto.transcriptId,
     });
 
-    return updatedMeeting ?? meeting;
+    const result = updatedMeeting ?? meeting;
+    await this.emitNotificationsToRecipients(notifications);
+    this.realtimeService.emitToUser(result.ownerId?.toString(), 'meeting.created', {
+      meeting: result,
+    });
+    return result;
   }
 
   async findAll(user?: AuthenticatedUser): Promise<Meeting[]> {
@@ -267,6 +277,95 @@ export class MeetingsService {
     return meeting;
   }
 
+  async search(user: AuthenticatedUser, rawQuery: string) {
+    const query = rawQuery.trim().toLowerCase();
+    if (!query) {
+      return { meetings: [], actionItems: [] };
+    }
+
+    const meetings = await this.findAccessibleMeetings(user);
+    const meetingIds = meetings.map((meeting) => meeting.id);
+    const aiResultIds = meetings.flatMap((meeting) =>
+      meeting.aiResultId ? [meeting.aiResultId] : [],
+    );
+    const actionItems = await this.actionItemsRepository.findByMeetingIds(meetingIds, aiResultIds);
+
+    return {
+      meetings: meetings.filter((meeting) =>
+        [meeting.title, meeting.description, meeting.status, meeting.aiStatus]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(query)),
+      ),
+      actionItems: actionItems.filter((item) =>
+        [item.task, item.responsiblePerson, item.status]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(query)),
+      ),
+    };
+  }
+
+  async listComments(meetingId: string, user: AuthenticatedUser) {
+    await this.findOne(meetingId, user);
+    return this.commentsRepository.findByMeetingId(meetingId);
+  }
+
+  async addComment(meetingId: string, message: string, user: AuthenticatedUser) {
+    const meeting = await this.findOne(meetingId, user);
+    if (!message?.trim()) {
+      throw new BadRequestException('Comentariul nu poate fi gol.');
+    }
+
+    const userProfile = await this.usersRepository.findOne(user.userId);
+    const comment = await this.commentsRepository.create({
+      meetingId,
+      authorId: user.userId,
+      authorEmail: user.email,
+      authorName:
+        `${userProfile?.firstName ?? ''} ${userProfile?.lastName ?? ''}`.trim() || user.email,
+      message: message.trim(),
+    });
+
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'comment.created', {
+      meetingId,
+      comment,
+    });
+    return comment;
+  }
+
+  async createShareLink(meetingId: string, user: AuthenticatedUser) {
+    await this.assertCanManageMeeting(meetingId, user);
+    const token = randomBytes(24).toString('hex');
+    const meeting = await this.meetingsRepository.update(meetingId, { shareToken: token });
+    const frontendUrl = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+      .split(',')[0]
+      .trim()
+      .replace(/\/+$/, '');
+
+    return {
+      token,
+      url: `${frontendUrl}/share/${token}`,
+      meeting,
+    };
+  }
+
+  async getSharedMeeting(token: string) {
+    const meetings = await this.meetingsRepository.findAll();
+    const meeting = meetings.find((item) => item.shareToken === token);
+    if (!meeting) {
+      throw new NotFoundException('Share link invalid sau expirat.');
+    }
+
+    const aiResult = meeting.aiResultId
+      ? await this.aiResultsRepository.findOne(meeting.aiResultId)
+      : undefined;
+    const actionItems = await this.actionItemsRepository.findByMeetingId(
+      meeting.id,
+      meeting.aiResultId,
+    );
+
+    return { meeting, aiResult, actionItems };
+  }
+
   async update(
     id: string,
     updateMeetingDto: UpdateMeetingDto,
@@ -287,6 +386,7 @@ export class MeetingsService {
         : undefined,
     });
     if (!meeting) throw new NotFoundException(`Meeting #${id} not found`);
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.updated', { meeting });
     return meeting;
   }
 
@@ -298,6 +398,10 @@ export class MeetingsService {
 
     const meeting = await this.meetingsRepository.remove(id);
     if (!meeting) throw new NotFoundException(`Meeting #${id} not found`);
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.deleted', {
+      meetingId: meeting.id,
+      meeting,
+    });
     return meeting;
   }
 
@@ -470,7 +574,7 @@ export class MeetingsService {
       ],
     });
 
-    return {
+    const result = {
       meeting: updatedMeeting ?? meeting,
       attendees,
       invitations,
@@ -478,6 +582,70 @@ export class MeetingsService {
       skippedEmails: submittedParticipants
         .filter((participant) => participant.email && existingEmails.has(participant.email))
         .map((participant) => participant.email as string),
+    };
+    await this.emitNotificationsToRecipients(notifications);
+    this.realtimeService.emitToUser(result.meeting.ownerId?.toString(), 'meeting.updated', {
+      meeting: result.meeting,
+    });
+    return result;
+  }
+
+  findMyInvitations(user: AuthenticatedUser): Promise<Invitation[]> {
+    return this.invitationsRepository.findByParticipantEmail(user.email);
+  }
+
+  async respondToInvitation(
+    id: string,
+    status: AttendanceStatus.Accepted | AttendanceStatus.Declined,
+    user: AuthenticatedUser,
+  ) {
+    if (![AttendanceStatus.Accepted, AttendanceStatus.Declined].includes(status)) {
+      throw new BadRequestException('Statusul invitatiei trebuie sa fie Acceptat sau Respins.');
+    }
+
+    const invitation = await this.invitationsRepository.findOne(id);
+    if (!invitation) {
+      throw new NotFoundException(`Invitation #${id} not found`);
+    }
+    if (invitation.participantEmail.toLowerCase().trim() !== user.email.toLowerCase().trim()) {
+      throw new ForbiddenException('Nu poti raspunde la invitatia altui utilizator.');
+    }
+
+    const meeting = await this.meetingsRepository.findOne(invitation.meetingId);
+    if (!meeting) {
+      throw new NotFoundException(`Meeting #${invitation.meetingId} not found`);
+    }
+
+    const updatedInvitation = await this.invitationsRepository.update(id, {
+      invitationStatus: status,
+    });
+
+    const attendees = await Promise.all(
+      (meeting.attendeeIds ?? []).map((attendeeId) => this.attendeesRepository.findOne(attendeeId)),
+    );
+    const matchingAttendee = attendees.find(
+      (attendee) => attendee?.email?.toLowerCase().trim() === user.email.toLowerCase().trim(),
+    );
+    if (matchingAttendee) {
+      await this.attendeesRepository.update(matchingAttendee.id, { attendanceStatus: status });
+    }
+
+    const ownerNotification = await this.notificationsRepository.create({
+      title: status === AttendanceStatus.Accepted ? 'Invitatie acceptata' : 'Invitatie refuzata',
+      message: `${user.email} a ${status === AttendanceStatus.Accepted ? 'acceptat' : 'refuzat'} invitatia la "${meeting.title}".`,
+      type: 'meeting-invitation-response',
+      recipientEmail: (await this.usersRepository.findOne(meeting.ownerId))?.email ?? user.email,
+      meetingId: meeting.id,
+      isRead: false,
+    });
+
+    await this.emitNotificationsToRecipients([ownerNotification]);
+    this.emitInvitationChange(user.userId, updatedInvitation ?? invitation);
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.updated', { meeting });
+
+    return {
+      invitation: updatedInvitation ?? invitation,
+      meeting,
     };
   }
 
@@ -540,7 +708,11 @@ export class MeetingsService {
       attendeeIds: (meeting.attendeeIds ?? []).filter((id) => id.toString() !== attendeeId),
     });
 
-    return updatedMeeting ?? meeting;
+    const result = updatedMeeting ?? meeting;
+    this.realtimeService.emitToUser(result.ownerId?.toString(), 'meeting.updated', {
+      meeting: result,
+    });
+    return result;
   }
 
   findInvitationsByEmail(email: string, user?: AuthenticatedUser): Promise<Invitation[]> {
@@ -553,6 +725,38 @@ export class MeetingsService {
     // Listeaza notificarile emailului curent. acum.
     this.assertOwnEmail(email, user);
     return this.notificationsRepository.findByRecipientEmail(user?.email ?? email);
+  }
+
+  findMyNotifications(user: AuthenticatedUser): Promise<Notification[]> {
+    return this.notificationsRepository.findByRecipientEmail(user.email);
+  }
+
+  async markNotificationRead(id: string, user: AuthenticatedUser): Promise<Notification> {
+    const notification = await this.notificationsRepository.findOne(id);
+    if (!notification) {
+      throw new NotFoundException(`Notification #${id} not found`);
+    }
+    if (notification.recipientEmail.toLowerCase().trim() !== user.email.toLowerCase().trim()) {
+      throw new ForbiddenException('Nu poti modifica notificarea altui utilizator.');
+    }
+
+    const updated = await this.notificationsRepository.update(id, { isRead: true });
+    const result = updated ?? notification;
+    this.realtimeService.emitToUser(user.userId, 'notification.read', { notification: result });
+    this.realtimeService.emitToUser(user.userId, 'notifications.changed', {});
+    return result;
+  }
+
+  async markAllNotificationsRead(user: AuthenticatedUser): Promise<{ updated: number }> {
+    const notifications = await this.notificationsRepository.findByRecipientEmail(user.email);
+    const unread = notifications.filter((notification) => !notification.isRead);
+    await Promise.all(
+      unread.map((notification) =>
+        this.notificationsRepository.update(notification.id, { isRead: true }),
+      ),
+    );
+    this.realtimeService.emitToUser(user.userId, 'notifications.changed', {});
+    return { updated: unread.length };
   }
 
   async findTranscriptForMeetingUser(transcriptId: string, user: AuthenticatedUser) {
@@ -604,7 +808,7 @@ export class MeetingsService {
     const versions = await this.transcriptsRepository.findByMeetingId(meetingId);
     const restoredIndex = versions.findIndex((version) => version.id === transcriptId);
 
-    return {
+    const result = {
       meeting: updatedMeeting ?? meeting,
       transcript: {
         ...transcript,
@@ -613,6 +817,10 @@ export class MeetingsService {
       },
       aiResultId: aiResult?.id,
     };
+    this.realtimeService.emitToUser(result.meeting.ownerId?.toString(), 'meeting.updated', {
+      meeting: result.meeting,
+    });
+    return result;
   }
 
   private normalizeParticipants(
@@ -773,6 +981,24 @@ export class MeetingsService {
     }
 
     return this.encryptionService.decrypt(owner.googleRefreshTokenEncrypted);
+  }
+
+  private async emitNotificationsToRecipients(notifications: Notification[]) {
+    await Promise.all(
+      notifications.map(async (notification) => {
+        const user = await this.usersRepository.findByEmail(notification.recipientEmail);
+        if (!user) return;
+        this.realtimeService.emitToUser(user.id, 'notification.created', { notification });
+        this.realtimeService.emitToUser(user.id, 'notifications.changed', {});
+        this.realtimeService.emitToUser(user.id, 'invitations.changed', {});
+      }),
+    );
+  }
+
+  private emitInvitationChange(userId: string, invitation: Invitation) {
+    this.realtimeService.emitToUser(userId, 'invitation.updated', { invitation });
+    this.realtimeService.emitToUser(userId, 'invitations.changed', {});
+    this.realtimeService.emitToUser(userId, 'notifications.changed', {});
   }
 
   private assertOwnEmail(email: string, user?: AuthenticatedUser): void {

@@ -11,6 +11,7 @@ type CreateMeetingData = Omit<
   aiStatus?: AiStatus;
   attendeeIds?: string[];
   invitationIds?: string[];
+  shareToken?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -120,6 +121,7 @@ export class MeetingsRepository {
       attendeeIds: document.attendeeIds,
       invitationIds: document.invitationIds,
       notificationIds: document.notificationIds,
+      shareToken: document.shareToken ?? null,
       createdAt: document.createdAt?.toString(),
       updatedAt: document.updatedAt?.toString(),
     };

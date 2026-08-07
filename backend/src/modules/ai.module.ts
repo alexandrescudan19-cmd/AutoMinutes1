@@ -14,6 +14,7 @@ import { TranscriptsRepository } from '../repositories/transcripts.repository';
 import { AiProviderService } from '../services/ai-provider.service';
 import { AiService } from '../services/ai.service';
 import { OllamaService } from '../services/ollama.service';
+import { RealtimeModule } from './realtime.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { OllamaService } from '../services/ollama.service';
       { name: ActionItem.name, schema: ActionItemSchema },
       { name: Invitation.name, schema: InvitationSchema },
     ]),
+    RealtimeModule,
   ],
   controllers: [AiController],
   providers: [

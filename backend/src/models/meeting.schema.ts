@@ -63,6 +63,9 @@ export class Meeting {
   @Prop({ type: [Types.ObjectId], ref: 'Notification', default: [] })
   notificationIds?: string[];
 
+  @Prop({ type: String, default: null })
+  shareToken?: string | null;
+
   createdAt!: string;
   updatedAt!: string;
 }

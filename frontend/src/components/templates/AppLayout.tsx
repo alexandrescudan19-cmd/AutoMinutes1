@@ -1,6 +1,17 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiMenu, FiPlus, FiX } from "react-icons/fi";
+import {
+  FiBell,
+  FiCheck,
+  FiChevronLeft,
+  FiChevronRight,
+  FiMenu,
+  FiPlus,
+  FiSearch,
+  FiShield,
+  FiUserCheck,
+  FiX,
+} from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import { Avatar, Button, Loader } from "../atoms";
 import { Modal, ThemeToggle } from "../molecules";
@@ -10,7 +21,15 @@ import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus
 import { processTranscript, uploadTranscriptFile } from "../../services/ai";
 import { API_BASE_URL } from "../../services/api";
 import { clearAuthSession, getAccessToken, isAccessTokenValid } from "../../services/authSession";
-import type { Meeting } from "../../types";
+import {
+  listInvitations,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  respondToInvitation,
+} from "../../services/notifications";
+import type { Invitation, Meeting, Notification } from "../../types";
+import { useRealtimeConnection, useRealtimeEvent } from "../../hooks/useRealtime";
 
 export interface AppLayoutProps {
   children: ReactNode;
@@ -71,6 +90,21 @@ const NAV_ITEMS = [
         <path d="M12 18h9" />
       </svg>
     ),
+  },
+  {
+    label: "Assigned to me",
+    to: "/assigned-to-me",
+    icon: <FiUserCheck aria-hidden="true" size={18} />,
+  },
+  {
+    label: "Search",
+    to: "/search",
+    icon: <FiSearch aria-hidden="true" size={18} />,
+  },
+  {
+    label: "Admin",
+    to: "/admin",
+    icon: <FiShield aria-hidden="true" size={18} />,
   },
 ];
 
@@ -168,6 +202,190 @@ function UserMenu({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function NotificationMenu({ collapsed }: { collapsed: boolean }) {
+  const navigate = useNavigate();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [respondingId, setRespondingId] = useState("");
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [nextNotifications, nextInvitations] = await Promise.all([
+        listNotifications(),
+        listInvitations(),
+      ]);
+      setNotifications(nextNotifications);
+      setInvitations(nextInvitations);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useRealtimeEvent("notifications.changed", () => void loadData());
+  useRealtimeEvent("invitations.changed", () => void loadData());
+  useRealtimeEvent("notification.created", () => void loadData());
+  useRealtimeEvent("invitation.updated", () => void loadData());
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadData]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
+  const pendingInvitations = invitations.filter(
+    (invitation) => invitation.invitationStatus === "Invitat",
+  );
+
+  const openMeeting = async (notification: Notification) => {
+    if (!notification.isRead) {
+      await markNotificationRead(notification.id);
+    }
+    await loadData();
+    setOpen(false);
+    if (notification.meetingId) {
+      navigate(`/meetings?meeting=${notification.meetingId}`);
+    }
+  };
+
+  const handleRespond = async (invitation: Invitation, status: "Acceptat" | "Respins") => {
+    setRespondingId(invitation.id);
+    try {
+      await respondToInvitation(invitation.id, status);
+      await loadData();
+    } finally {
+      setRespondingId("");
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsRead();
+    await loadData();
+  };
+
+  return (
+    <div ref={menuRef} className="relative mb-2">
+      {open && (
+        <div
+          className={`absolute bottom-full left-0 z-20 mb-2 max-h-[70vh] w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
+            collapsed ? "md:left-0" : ""
+          }`}
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notifications</p>
+            <button
+              type="button"
+              disabled={unreadCount === 0}
+              onClick={() => void handleMarkAllRead()}
+              className="text-xs font-medium text-brand disabled:text-gray-400"
+            >
+              Mark all read
+            </button>
+          </div>
+
+          {pendingInvitations.length > 0 && (
+            <div className="mb-3 flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase text-gray-400">Invitations</p>
+              {pendingInvitations.slice(0, 3).map((invitation) => (
+                <div
+                  key={invitation.id}
+                  className="rounded-lg border border-gray-100 p-2 dark:border-gray-700"
+                >
+                  <p className="text-sm text-gray-800 dark:text-gray-100">
+                    Meeting invitation
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Meeting ID: {invitation.meetingId}
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      size="sm"
+                      leftIcon={<FiCheck />}
+                      isLoading={respondingId === invitation.id}
+                      onClick={() => void handleRespond(invitation, "Acceptat")}
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={respondingId === invitation.id}
+                      onClick={() => void handleRespond(invitation, "Respins")}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {isLoading && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            )}
+            {!isLoading && notifications.length === 0 && pendingInvitations.length === 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No notifications yet.</p>
+            )}
+            {notifications.slice(0, 8).map((notification) => (
+              <button
+                key={notification.id}
+                type="button"
+                onClick={() => void openMeeting(notification)}
+                className={`rounded-lg p-2 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                  notification.isRead ? "opacity-70" : "bg-brand/5 dark:bg-brand/10"
+                }`}
+              >
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {notification.title}
+                </p>
+                <p className="line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                  {notification.message}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        title={collapsed ? "Notifications" : undefined}
+        onClick={() => setOpen((value) => !value)}
+        className={`flex h-10 w-full cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 ${
+          collapsed ? "md:justify-center md:px-0" : ""
+        }`}
+      >
+        <span className="relative">
+          <FiBell aria-hidden="true" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </span>
+        <span className={labelClasses(collapsed)}>Notifications</span>
+      </button>
+    </div>
+  );
+}
+
 export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -177,7 +395,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     () => localStorage.getItem("sidebarCollapsed") === "1",
   );
   const createMeeting = useMeetingsStore((state) => state.createMeeting);
+  const fetchMeetings = useMeetingsStore((state) => state.fetchMeetings);
   const { connected: googleConnected, loading: googleStatusLoading } = useGoogleConnectionStatus();
+
+  useRealtimeConnection();
+  useRealtimeEvent("meeting.created", () => void fetchMeetings());
+  useRealtimeEvent("meeting.updated", () => void fetchMeetings());
+  useRealtimeEvent("meeting.deleted", () => void fetchMeetings());
+  useRealtimeEvent("ai.processing", () => void fetchMeetings());
+  useRealtimeEvent("ai.completed", () => void fetchMeetings());
+  useRealtimeEvent("ai.failed", () => void fetchMeetings());
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setIsSidebarOpen(false), 0);
@@ -343,6 +570,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </nav>
 
+        <NotificationMenu collapsed={isCollapsed} />
         <UserMenu collapsed={isCollapsed} />
       </aside>
 
