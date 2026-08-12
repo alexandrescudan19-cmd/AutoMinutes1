@@ -228,3 +228,20 @@ export interface RestoreTranscriptVersionResult {
   transcript: TranscriptVersion;
   aiResultId?: string;
 }
+
+export interface AiProviderStatus {
+  status: string;
+  service: string;
+  ai: {
+    provider: string;
+    ollama?: {
+      url?: string;
+      model?: string;
+    };
+    openAiCompatible?: {
+      baseUrl?: string;
+      model?: string;
+      configured: boolean;
+    };
+  };
+}

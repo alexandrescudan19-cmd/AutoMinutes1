@@ -1,5 +1,15 @@
 import { api } from "./api";
-import type { ActionItem, AIResult, ProcessTranscriptInput, ProcessTranscriptResult } from "../types";
+import type {
+  ActionItem,
+  AIResult,
+  AiProviderStatus,
+  ProcessTranscriptInput,
+  ProcessTranscriptResult,
+} from "../types";
+
+export function getAiProviderStatus() {
+  return api.get<AiProviderStatus>("/ai").then((res) => res.data);
+}
 
 export function getAiResult(aiResultId: string) {
   return api.get<AIResult>(`/ai/results/${aiResultId}`).then((res) => res.data);

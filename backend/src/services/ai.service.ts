@@ -359,6 +359,7 @@ export class AiService {
     language: string,
   ): Promise<AiTranscriptResult> {
     const provider = (process.env.AI_PROVIDER ?? 'auto').toLowerCase();
+    const fallbackOnError = (process.env.AI_FALLBACK_ON_ERROR ?? 'true').toLowerCase() !== 'false';
 
     if (provider === 'fallback' || provider === 'mock') {
       return this.generateFallbackTranscriptResult(transcript, language);
@@ -369,7 +370,10 @@ export class AiService {
         this.buildPrompt(transcript, language),
       );
     } catch (error) {
-      if (provider === 'ollama' || provider === 'openai' || provider === 'openai-compatible') {
+      if (
+        !fallbackOnError &&
+        (provider === 'ollama' || provider === 'openai' || provider === 'openai-compatible')
+      ) {
         throw error;
       }
 

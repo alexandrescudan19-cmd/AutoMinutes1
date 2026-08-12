@@ -16,6 +16,8 @@ import { Button } from "../../../atoms";
 import MeetingForm from "../../../organisms/meeting/MeetingForm/MeetingForm.tsx";
 import MeetingAttendeesPanel from "../../../organisms/attendee/MeetingAttendeesPanel/MeetingAttendeesPanel.tsx";
 import AiResultsPanel from "../../../organisms/ai/AiResultsPanel/AiResultsPanel.tsx";
+import { getAiResult } from "../../../../services/ai";
+import { listMeetingActionItems } from "../../../../services/actionItems";
 import {
   addMeetingComment,
   createMeetingShareLink,
@@ -79,8 +81,13 @@ export default function MeetingDetailsModal({
     }
   };
 
-  const exportMarkdown = () => {
+  const exportMarkdown = async () => {
     if (!meeting) return;
+    const [aiResult, actionItems] = await Promise.all([
+      meeting.aiResultId ? getAiResult(meeting.aiResultId).catch(() => null) : Promise.resolve(null),
+      listMeetingActionItems(meeting.id).catch(() => []),
+    ]);
+
     const markdown = [
       `# ${meeting.title}`,
       "",
@@ -90,6 +97,30 @@ export default function MeetingDetailsModal({
       "",
       "## Description",
       meeting.description || "No description.",
+      "",
+      "## Summary",
+      aiResult?.summary || "No AI summary available.",
+      "",
+      "## Key Points",
+      ...(aiResult?.keyPoints?.length
+        ? aiResult.keyPoints.map((point) => `- ${point}`)
+        : ["No key points available."]),
+      "",
+      "## Decisions",
+      ...(aiResult?.decisions?.length
+        ? aiResult.decisions.map((decision) => `- ${decision}`)
+        : ["No decisions available."]),
+      "",
+      "## Follow-up Notes",
+      aiResult?.followUpNotes || "No follow-up notes available.",
+      "",
+      "## Action Items",
+      ...(actionItems.length
+        ? actionItems.map((item) => {
+            const dueDate = item.dueDate ? `, due ${new Date(item.dueDate).toLocaleDateString()}` : "";
+            return `- [${item.status}] ${item.task} - ${item.responsiblePerson}${dueDate}`;
+          })
+        : ["No action items available."]),
     ].join("\n");
     const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -289,7 +320,7 @@ export default function MeetingDetailsModal({
                       type="button"
                       variant="secondary"
                       leftIcon={<FiDownload aria-hidden="true" />}
-                      onClick={exportMarkdown}
+                      onClick={() => void exportMarkdown()}
                     >
                       Export Markdown
                     </Button>
