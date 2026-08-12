@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiAlertTriangle, FiArrowRight, FiCalendar } from "react-icons/fi";
 import { Card } from "../../components/atoms";
@@ -6,6 +6,7 @@ import { Pagination, StatCard, StatusBadge, getStatusDotColor } from "../../comp
 import { AppLayout } from "../../components/templates";
 import { listMeetings } from "../../services/meetings";
 import { listActionItems } from "../../services/actionItems";
+import { useRealtimeEvent } from "../../hooks/useRealtime";
 import { formatDate, formatDateTime } from "../../utils/date.ts";
 import type { ActionItemListItem, Meeting } from "../../types";
 
@@ -25,25 +26,38 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [failedPage, setFailedPage] = useState(1);
 
-  useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      setError("");
-      try {
-        const [meetingsData, actionItemsData] = await Promise.all([
-          listMeetings(),
-          listActionItems(),
-        ]);
-        setMeetings(meetingsData);
-        setActionItems(actionItemsData);
-      } catch {
-        setError("Couldn't load dashboard data.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    void load();
+  const loadDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const [meetingsData, actionItemsData] = await Promise.all([
+        listMeetings(),
+        listActionItems(),
+      ]);
+      setMeetings(meetingsData);
+      setActionItems(actionItemsData);
+    } catch {
+      setError("Couldn't load dashboard data.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadDashboardData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadDashboardData]);
+
+  useRealtimeEvent("meeting.created", () => void loadDashboardData());
+  useRealtimeEvent("meeting.updated", () => void loadDashboardData());
+  useRealtimeEvent("meeting.deleted", () => void loadDashboardData());
+  useRealtimeEvent("ai.processing", () => void loadDashboardData());
+  useRealtimeEvent("ai.completed", () => void loadDashboardData());
+  useRealtimeEvent("ai.failed", () => void loadDashboardData());
+  useRealtimeEvent("actionItems.changed", () => void loadDashboardData());
 
   const stats = useMemo(
     () => ({
