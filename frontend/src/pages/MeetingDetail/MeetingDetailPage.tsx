@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/atoms";
 import { MeetingDetailsModal } from "../../components/molecules";
 import { AppLayout } from "../../components/templates";
@@ -6,6 +6,8 @@ import { AppLayout } from "../../components/templates";
 export default function MeetingDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "ai" ? "ai" : "overview";
 
   return (
     <AppLayout>
@@ -25,7 +27,11 @@ export default function MeetingDetailPage() {
         </div>
       </div>
 
-      <MeetingDetailsModal meetingId={id ?? null} onClose={() => navigate("/meetings")} />
+      <MeetingDetailsModal
+        meetingId={id ?? null}
+        initialTab={initialTab}
+        onClose={() => navigate("/meetings")}
+      />
     </AppLayout>
   );
 }

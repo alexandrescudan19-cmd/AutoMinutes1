@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import axios from "axios";
 import { FiUpload } from "react-icons/fi";
 import { Button, TextArea } from "../../../atoms";
 import { processTranscript, uploadTranscriptFile } from "../../../../services/ai";
+import { getFriendlyApiError } from "../../../../services/apiErrors";
 import type { ProcessTranscriptResult } from "../../../../types";
 
 export interface TranscriptUploadFormProps {
@@ -64,10 +64,7 @@ export default function TranscriptUploadForm({
           });
       onProcessed(result);
     } catch (err) {
-      const message = axios.isAxiosError<{ message?: string }>(err)
-        ? err.response?.data?.message
-        : undefined;
-      setError(message ?? "AI processing failed. Any previous results have been kept.");
+      setError(getFriendlyApiError(err, "AI processing failed. Any previous results have been kept."));
     } finally {
       setIsSubmitting(false);
     }

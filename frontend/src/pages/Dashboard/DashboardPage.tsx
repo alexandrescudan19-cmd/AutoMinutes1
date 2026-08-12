@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiAlertTriangle, FiArrowRight, FiCalendar } from "react-icons/fi";
 import { Card } from "../../components/atoms";
-import { MeetingDetailsModal, Pagination, StatCard, StatusBadge, getStatusDotColor } from "../../components/molecules";
+import { Pagination, StatCard, StatusBadge, getStatusDotColor } from "../../components/molecules";
 import { AppLayout } from "../../components/templates";
 import { listMeetings } from "../../services/meetings";
 import { listActionItems } from "../../services/actionItems";
@@ -23,8 +23,6 @@ export default function DashboardPage() {
   const [actionItems, setActionItems] = useState<ActionItemListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"overview" | "ai">("overview");
   const [failedPage, setFailedPage] = useState(1);
 
   useEffect(() => {
@@ -83,11 +81,6 @@ export default function DashboardPage() {
     effectiveFailedPage * FAILED_PAGE_SIZE,
   );
 
-  const openMeeting = (id: string, tab: "overview" | "ai" = "overview") => {
-    setSelectedTab(tab);
-    setSelectedMeetingId(id);
-  };
-
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -117,7 +110,7 @@ export default function DashboardPage() {
                     <button
                       key={meeting.id}
                       type="button"
-                      onClick={() => openMeeting(meeting.id, "ai")}
+                      onClick={() => navigate(`/meetings/${meeting.id}?tab=ai`)}
                       className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-left text-sm hover:bg-red-50 dark:border-red-900 dark:bg-gray-900 dark:hover:bg-red-950/40"
                     >
                       <span className="min-w-0 flex-1 break-words text-gray-900 dark:text-gray-100">
@@ -151,7 +144,7 @@ export default function DashboardPage() {
                       <button
                         key={meeting.id}
                         type="button"
-                        onClick={() => openMeeting(meeting.id)}
+                        onClick={() => navigate(`/meetings/${meeting.id}`)}
                         className="flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-2 text-left hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                       >
                         <FiCalendar className="shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
@@ -218,11 +211,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <MeetingDetailsModal
-        meetingId={selectedMeetingId}
-        initialTab={selectedTab}
-        onClose={() => setSelectedMeetingId(null)}
-      />
     </AppLayout>
   );
 }
