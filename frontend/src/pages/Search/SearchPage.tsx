@@ -11,18 +11,29 @@ export default function SearchPage() {
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [actionItems, setActionItems] = useState<ActionItemListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const timeoutId = window.setTimeout(async () => {
       if (!query.trim()) {
         setMeetings([]);
         setActionItems([]);
+        setError("");
         return;
       }
       setSearchParams({ q: query }, { replace: true });
-      const result = await searchGlobal(query);
-      setMeetings(result.meetings);
-      setActionItems(result.actionItems);
+      setIsLoading(true);
+      setError("");
+      try {
+        const result = await searchGlobal(query);
+        setMeetings(result.meetings);
+        setActionItems(result.actionItems);
+      } catch {
+        setError("Couldn't search right now.");
+      } finally {
+        setIsLoading(false);
+      }
     }, 300);
     return () => window.clearTimeout(timeoutId);
   }, [query, setSearchParams]);
@@ -32,6 +43,8 @@ export default function SearchPage() {
       <div className="flex flex-col gap-5">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Search</h1>
         <Input label="Search meetings and action items" value={query} onChange={(e) => setQuery(e.target.value)} />
+        {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Searching...</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <Card title="Meetings">
           <div className="flex flex-col gap-2">
             {meetings.map((meeting) => (

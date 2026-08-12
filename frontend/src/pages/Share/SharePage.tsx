@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card } from "../../components/atoms";
 import { getSharedMeeting } from "../../services/meetings";
+import { formatDateRange } from "../../utils/date";
 import type { AIResult, ActionItem, Meeting } from "../../types";
 
 export default function SharePage() {
@@ -28,20 +29,56 @@ export default function SharePage() {
         {data && (
           <>
             <Card title={data.meeting.title}>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{data.meeting.description}</p>
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                <p>{formatDateRange(data.meeting.startDateTime, data.meeting.endDateTime)}</p>
+                <p>{data.meeting.description || "No description available."}</p>
+              </div>
             </Card>
             <Card title="Summary">
               <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{data.aiResult?.summary ?? "No summary available."}</p>
             </Card>
+            <Card title="Key points">
+              {data.aiResult?.keyPoints?.length ? (
+                <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
+                  {data.aiResult.keyPoints.map((point, index) => (
+                    <li key={index}>{point}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No key points available.</p>
+              )}
+            </Card>
+            <Card title="Decisions">
+              {data.aiResult?.decisions?.length ? (
+                <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
+                  {data.aiResult.decisions.map((decision, index) => (
+                    <li key={index}>{decision}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No decisions available.</p>
+              )}
+            </Card>
+            {data.aiResult?.followUpNotes && (
+              <Card title="Follow-up notes">
+                <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                  {data.aiResult.followUpNotes}
+                </p>
+              </Card>
+            )}
             <Card title="Action items">
-              <div className="flex flex-col gap-2">
-                {data.actionItems.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.task}</p>
-                    <p className="text-xs text-gray-500">{item.responsiblePerson} / {item.status}</p>
-                  </div>
-                ))}
-              </div>
+              {data.actionItems.length ? (
+                <div className="flex flex-col gap-2">
+                  {data.actionItems.map((item) => (
+                    <div key={item.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.task}</p>
+                      <p className="text-xs text-gray-500">{item.responsiblePerson} / {item.status}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No action items available.</p>
+              )}
             </Card>
           </>
         )}

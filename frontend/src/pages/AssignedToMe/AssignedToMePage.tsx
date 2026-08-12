@@ -12,15 +12,17 @@ export default function AssignedToMePage() {
   const [now] = useState(() => Date.now());
   const user = getStoredUser();
 
+  const loadItems = async () => {
+    setIsLoading(true);
+    try {
+      setItems(await listActionItems());
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const timeoutId = window.setTimeout(async () => {
-      setIsLoading(true);
-      try {
-        setItems(await listActionItems());
-      } finally {
-        setIsLoading(false);
-      }
-    }, 0);
+    const timeoutId = window.setTimeout(() => void loadItems(), 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
 
@@ -50,14 +52,14 @@ export default function AssignedToMePage() {
         </div>
         {dueSoon.length > 0 && (
           <Card title="Reminders">
-            <ActionItemList items={dueSoon} showMeetingTitle onChanged={() => {}} />
+            <ActionItemList items={dueSoon} showMeetingTitle onChanged={() => void loadItems()} />
           </Card>
         )}
         <Card title="My action items">
           {isLoading ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
           ) : (
-            <ActionItemList items={assigned} showMeetingTitle onChanged={() => {}} />
+            <ActionItemList items={assigned} showMeetingTitle onChanged={() => void loadItems()} />
           )}
         </Card>
       </div>
