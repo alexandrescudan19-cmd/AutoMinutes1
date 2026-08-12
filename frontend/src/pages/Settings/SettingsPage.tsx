@@ -4,6 +4,7 @@ import { Badge, Button, Card } from "../../components/atoms";
 import { AppLayout } from "../../components/templates";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
 import { api, API_BASE_URL } from "../../services/api";
+import { getFriendlyApiError } from "../../services/apiErrors";
 import { clearAuthSession, getAccessToken, isAccessTokenValid } from "../../services/authSession";
 import { getAiProviderStatus } from "../../services/ai";
 import { getMe, updateMe } from "../../services/users";
@@ -16,9 +17,11 @@ export default function SettingsPage() {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [profileError, setProfileError] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [aiStatus, setAiStatus] = useState<AiProviderStatus | null>(null);
   const [isAiStatusLoading, setIsAiStatusLoading] = useState(true);
+  const [aiStatusError, setAiStatusError] = useState("");
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -37,33 +40,47 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(async () => {
-      const user = await getMe();
-      setFirstName(user.firstName);
-      setLastName(user.lastName);
+      try {
+        const user = await getMe();
+        setFirstName(user.firstName);
+        setLastName(user.lastName);
+      } catch (error) {
+        setProfileError(getFriendlyApiError(error, "Couldn't load your profile."));
+      }
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
 
+  const refreshAiStatus = async () => {
+    setIsAiStatusLoading(true);
+    setAiStatusError("");
+    try {
+      setAiStatus(await getAiProviderStatus());
+    } catch (error) {
+      setAiStatus(null);
+      setAiStatusError(getFriendlyApiError(error, "Couldn't load AI provider status."));
+    } finally {
+      setIsAiStatusLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const timeoutId = window.setTimeout(async () => {
-      setIsAiStatusLoading(true);
-      try {
-        setAiStatus(await getAiProviderStatus());
-      } catch {
-        setAiStatus(null);
-      } finally {
-        setIsAiStatusLoading(false);
-      }
+    const timeoutId = window.setTimeout(() => {
+      void refreshAiStatus();
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
 
   const saveProfile = async () => {
     setIsSavingProfile(true);
+    setProfileError("");
+    setMessage("");
     try {
       const user = await updateMe({ firstName, lastName });
       localStorage.setItem("user", JSON.stringify(user));
       setMessage("Profile updated.");
+    } catch (error) {
+      setProfileError(getFriendlyApiError(error, "Couldn't update your profile."));
     } finally {
       setIsSavingProfile(false);
     }
@@ -81,9 +98,13 @@ export default function SettingsPage() {
 
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
+    setMessage("");
     try {
       await api.post("/auth/google/disconnect");
       await refetch();
+      setMessage("Google Calendar disconnected.");
+    } catch (error) {
+      setMessage(getFriendlyApiError(error, "Couldn't disconnect Google Calendar."));
     } finally {
       setIsDisconnecting(false);
     }
@@ -120,6 +141,9 @@ export default function SettingsPage() {
               Save profile
             </Button>
           </div>
+          {profileError && (
+            <p className="mt-3 text-sm text-red-600 dark:text-red-400">{profileError}</p>
+          )}
         </Card>
 
         <Card title="Google Calendar">
@@ -168,6 +192,12 @@ export default function SettingsPage() {
                     {aiStatus.ai.openAiCompatible?.model && (
                       <Badge variant="neutral">{aiStatus.ai.openAiCompatible.model}</Badge>
                     )}
+                    {aiStatus.ai.openAiCompatible?.baseUrl && (
+                      <Badge variant="neutral">{aiStatus.ai.openAiCompatible.baseUrl}</Badge>
+                    )}
+                    {aiStatus.ai.ollama?.model && (
+                      <Badge variant="neutral">{aiStatus.ai.ollama.model}</Badge>
+                    )}
                     <Badge
                       variant={aiStatus.ai.openAiCompatible?.configured ? "success" : "warning"}
                     >
@@ -178,18 +208,15 @@ export default function SettingsPage() {
                   <Badge variant="danger">Unavailable</Badge>
                 )}
               </div>
+              {aiStatusError && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{aiStatusError}</p>
+              )}
             </div>
             <Button
               type="button"
               variant="secondary"
               isLoading={isAiStatusLoading}
-              onClick={() => {
-                setIsAiStatusLoading(true);
-                void getAiProviderStatus()
-                  .then(setAiStatus)
-                  .catch(() => setAiStatus(null))
-                  .finally(() => setIsAiStatusLoading(false));
-              }}
+              onClick={() => void refreshAiStatus()}
             >
               Refresh
             </Button>
