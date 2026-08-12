@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Card } from "../../components/atoms";
+import toast from "react-hot-toast";
+import { FiClipboard, FiLink, FiPrinter } from "react-icons/fi";
+import { Button, Card } from "../../components/atoms";
 import { getSharedMeeting } from "../../services/meetings";
-import { formatDateRange } from "../../utils/date";
+import { formatDate, formatDateRange } from "../../utils/date";
 import type { AIResult, ActionItem, Meeting } from "../../types";
 
 export default function SharePage() {
@@ -21,10 +23,89 @@ export default function SharePage() {
     return () => window.clearTimeout(timeoutId);
   }, [token]);
 
+  const buildSummaryText = () => {
+    if (!data) return "";
+    const lines = [
+      data.meeting.title,
+      formatDateRange(data.meeting.startDateTime, data.meeting.endDateTime),
+      "",
+      "Summary",
+      data.aiResult?.summary ?? "No summary available.",
+      "",
+      "Key points",
+      ...(data.aiResult?.keyPoints?.length
+        ? data.aiResult.keyPoints.map((point) => `- ${point}`)
+        : ["No key points available."]),
+      "",
+      "Decisions",
+      ...(data.aiResult?.decisions?.length
+        ? data.aiResult.decisions.map((decision) => `- ${decision}`)
+        : ["No decisions available."]),
+      "",
+      "Follow-up notes",
+      data.aiResult?.followUpNotes ?? "No follow-up notes available.",
+      "",
+      "Action items",
+      ...(data.actionItems.length
+        ? data.actionItems.map((item) => {
+            const dueDate = item.dueDate ? `, due ${formatDate(item.dueDate)}` : "";
+            return `- [${item.status}] ${item.task} - ${item.responsiblePerson}${dueDate}`;
+          })
+        : ["No action items available."]),
+    ];
+    return lines.join("\n");
+  };
+
+  const copyShareLink = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    toast.success("Share link copied.");
+  };
+
+  const copySummary = async () => {
+    await navigator.clipboard.writeText(buildSummaryText());
+    toast.success("Summary copied.");
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-950">
       <div className="mx-auto flex max-w-3xl flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">AutoMinutes Shared Summary</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-brand">AutoMinutes</p>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Shared Summary</h1>
+          </div>
+          {data && (
+            <div className="flex flex-wrap gap-2 print:hidden">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<FiLink aria-hidden="true" />}
+                onClick={() => void copyShareLink()}
+              >
+                Copy link
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<FiClipboard aria-hidden="true" />}
+                onClick={() => void copySummary()}
+              >
+                Copy summary
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<FiPrinter aria-hidden="true" />}
+                onClick={() => window.print()}
+              >
+                Print
+              </Button>
+            </div>
+          )}
+        </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         {data && (
           <>
