@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader } from "../../components/atoms";
 import { AuthLayout } from "../../components/templates";
 import { api } from "../../services/api";
 
 export default function VerifyEmailPage() {
+  const { token: tokenParam } = useParams();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
@@ -17,7 +18,7 @@ export default function VerifyEmailPage() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    const token = searchParams.get("token");
+    const token = searchParams.get("token") ?? tokenParam;
     api
       .get(`/auth/verify?token=${token ?? ""}`)
       .then(({ data }) => {
@@ -28,7 +29,7 @@ export default function VerifyEmailPage() {
         setStatus("error");
         setMessage(err.response?.data?.message ?? "Verification failed");
       });
-  }, [searchParams]);
+  }, [searchParams, tokenParam]);
 
   return (
     <AuthLayout>

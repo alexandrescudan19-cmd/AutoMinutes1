@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { isAxiosError } from "axios";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button, PasswordInput } from "../../components/atoms";
 import { AuthLayout } from "../../components/templates";
@@ -15,8 +15,9 @@ function getApiErrorMessage(error: unknown) {
 }
 
 export default function ResetPasswordPage() {
+  const { token: tokenParam } = useParams();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const token = searchParams.get("token") ?? tokenParam ?? "";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
