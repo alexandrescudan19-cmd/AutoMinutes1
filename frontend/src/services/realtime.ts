@@ -10,6 +10,7 @@ export type RealtimeEvent =
   | "ai.processing"
   | "ai.completed"
   | "ai.failed"
+  | "ai.result.updated"
   | "actionItem.created"
   | "actionItem.updated"
   | "actionItem.deleted"
@@ -18,7 +19,8 @@ export type RealtimeEvent =
   | "notification.read"
   | "notifications.changed"
   | "invitation.updated"
-  | "invitations.changed";
+  | "invitations.changed"
+  | "comment.created";
 
 let socket: Socket | null = null;
 

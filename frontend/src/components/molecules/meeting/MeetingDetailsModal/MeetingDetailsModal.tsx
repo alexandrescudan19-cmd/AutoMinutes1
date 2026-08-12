@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FiDownload,
   FiEdit2,
@@ -30,6 +30,7 @@ import {
   formatDateRange,
   toDateTimeLocalValue,
 } from "../../../../utils/date.ts";
+import { useRealtimeEvent } from "../../../../hooks/useRealtime";
 import type { Meeting, MeetingComment } from "../../../../types";
 
 type Tab = "overview" | "attendees" | "ai" | "comments";
@@ -67,19 +68,23 @@ export default function MeetingDetailsModal({
   const [isCommenting, setIsCommenting] = useState(false);
   const [isImportingTranscript, setIsImportingTranscript] = useState(false);
 
-  const refetchMeeting = async (id: string) => {
+  const loadComments = useCallback(async (id: string) => {
+    setComments(await listMeetingComments(id));
+  }, []);
+
+  const refetchMeeting = useCallback(async (id: string) => {
     setIsLoading(true);
     setError("");
     try {
       const data = await getMeeting(id);
       setMeeting(data);
-      setComments(await listMeetingComments(id));
+      await loadComments(id);
     } catch {
       setError("Couldn't load the meeting.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [loadComments]);
 
   const exportMarkdown = async () => {
     if (!meeting) return;
@@ -159,7 +164,7 @@ export default function MeetingDetailsModal({
     try {
       await addMeetingComment(meeting.id, commentText);
       setCommentText("");
-      setComments(await listMeetingComments(meeting.id));
+      await loadComments(meeting.id);
     } finally {
       setIsCommenting(false);
     }
@@ -177,7 +182,12 @@ export default function MeetingDetailsModal({
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [initialTab, meetingId]);
+  }, [initialTab, meetingId, refetchMeeting]);
+
+  useRealtimeEvent<{ meetingId: string }>("comment.created", (payload) => {
+    if (!meeting?.id || payload.meetingId !== meeting.id) return;
+    void loadComments(meeting.id);
+  });
 
   const handleUpdate = async (values: {
     title: string;

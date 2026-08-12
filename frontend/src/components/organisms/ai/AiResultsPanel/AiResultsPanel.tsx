@@ -12,6 +12,7 @@ import {
   restoreMeetingTranscriptVersion,
 } from "../../../../services/meetings";
 import { formatDateTime } from "../../../../utils/date.ts";
+import { useRealtimeEvent } from "../../../../hooks/useRealtime";
 import type {
   ActionItem,
   AIResult,
@@ -115,6 +116,18 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
     const interval = setInterval(() => onMeetingChangedRef.current(), 4000);
     return () => clearInterval(interval);
   }, [isProcessing]);
+
+  useRealtimeEvent<{ meetingId: string; aiResult: AIResult }>("ai.result.updated", (payload) => {
+    if (payload.meetingId !== meeting.id) return;
+    setAiResult(payload.aiResult);
+    setSubTab("summary");
+    onMeetingChangedRef.current();
+  });
+
+  useRealtimeEvent<{ meetingId?: string }>("actionItems.changed", (payload) => {
+    if (payload.meetingId && payload.meetingId !== meeting.id) return;
+    void loadActionItems();
+  });
 
   const handleProcessed = (result: ProcessTranscriptResult) => {
     // Afiseaza rezultatul nou generat.
