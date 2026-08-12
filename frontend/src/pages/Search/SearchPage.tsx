@@ -35,7 +35,7 @@ export default function SearchPage() {
         <Card title="Meetings">
           <div className="flex flex-col gap-2">
             {meetings.map((meeting) => (
-              <button key={meeting.id} className="rounded-lg border border-gray-200 p-3 text-left dark:border-gray-700" onClick={() => navigate(`/meetings?meeting=${meeting.id}`)}>
+              <button key={meeting.id} className="rounded-lg border border-gray-200 p-3 text-left dark:border-gray-700" onClick={() => navigate(`/meetings/${meeting.id}`)}>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{meeting.title}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{meeting.status} / {meeting.aiStatus}</p>
               </button>

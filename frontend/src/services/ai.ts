@@ -5,6 +5,7 @@ import type {
   AiProviderStatus,
   ProcessTranscriptInput,
   ProcessTranscriptResult,
+  UpdateAIResultInput,
 } from "../types";
 
 export function getAiProviderStatus() {
@@ -13,6 +14,10 @@ export function getAiProviderStatus() {
 
 export function getAiResult(aiResultId: string) {
   return api.get<AIResult>(`/ai/results/${aiResultId}`).then((res) => res.data);
+}
+
+export function updateAiResult(aiResultId: string, input: UpdateAIResultInput) {
+  return api.patch<AIResult>(`/ai/results/${aiResultId}`, input).then((res) => res.data);
 }
 
 export function getAiResultActionItems(aiResultId: string) {

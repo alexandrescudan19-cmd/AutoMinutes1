@@ -4,6 +4,7 @@ import RegisterPage from "../pages/Register/RegisterPage";
 import ActionItemsPage from "../pages/ActionItems/ActionItemsPage";
 import DashboardPage from "../pages/Dashboard/DashboardPage";
 import MeetingsPage from "../pages/Meetings/MeetingsPage";
+import MeetingDetailPage from "../pages/MeetingDetail/MeetingDetailPage";
 import VerifyEmailPage from "../pages/VerifyEmail/VerifyEmailPage";
 import OAuthCallbackPage from "../pages/Login/OAuthCallbackPage";
 import SettingsPage from "../pages/Settings/SettingsPage";
@@ -32,6 +33,7 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
+        <Route path="/meetings/:id" element={<MeetingDetailPage />} />
         <Route path="/action-items" element={<ActionItemsPage />} />
         <Route path="/assigned-to-me" element={<AssignedToMePage />} />
         <Route path="/search" element={<SearchPage />} />

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { CreateActionItemDto } from '../dto/ai/create-action-item.dto';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
+import { UpdateAiResultDto } from '../dto/ai/update-ai-result.dto';
 import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItem, ActionItemStatus } from '../models/action-item.schema';
 import { AIResult } from '../models/ai-result.schema';
@@ -110,6 +111,38 @@ export class AiService {
       meetingTitle: meeting.title,
       actionItems: actionItems.map((actionItem) => this.withMeeting(actionItem, meeting)),
     };
+  }
+
+  async updateResult(aiResultId: string, dto: UpdateAiResultDto, user: AuthenticatedUser) {
+    // Permite creatorului sa corecteze rezultatul AI.
+    const { aiResult, meeting } = await this.getAccessibleAiResult(aiResultId, user);
+    if (meeting.ownerId?.toString() !== user.userId) {
+      throw new ForbiddenException('Doar creatorul meeting-ului poate modifica rezultatul AI.');
+    }
+
+    const updated = await this.aiResultsRepository.update(aiResult.id, {
+      summary: dto.summary?.trim() || aiResult.summary,
+      keyPoints: this.normalizeStringList(dto.keyPoints) ?? aiResult.keyPoints,
+      decisions: this.normalizeStringList(dto.decisions) ?? aiResult.decisions,
+      followUpNotes:
+        dto.followUpNotes === null
+          ? undefined
+          : dto.followUpNotes !== undefined
+            ? this.normalizeFollowUpNotes(dto.followUpNotes)
+            : aiResult.followUpNotes,
+    });
+
+    if (!updated) {
+      throw new NotFoundException(`AI result #${aiResultId} not found`);
+    }
+
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'ai.result.updated', {
+      meetingId: meeting.id,
+      aiResult: updated,
+    });
+    this.realtimeService.emitToUser(meeting.ownerId?.toString(), 'meeting.updated', { meeting });
+
+    return updated;
   }
 
   async listMeetingActionItems(meetingId: string, user: AuthenticatedUser) {
@@ -630,6 +663,12 @@ ${transcript}
     // Curata notitele de follow-up. acum.
     if (!notes || notes.trim().toLowerCase() === 'null') return undefined;
     return notes.trim();
+  }
+
+  private normalizeStringList(items?: string[]): string[] | undefined {
+    // Normalizeaza listele editate manual.
+    if (!items) return undefined;
+    return items.map((item) => item.trim()).filter(Boolean);
   }
 
   private parseDueDate(dueDate?: string): Date | undefined {

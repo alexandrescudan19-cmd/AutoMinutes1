@@ -19,6 +19,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateActionItemDto } from '../dto/ai/create-action-item.dto';
 import * as mammoth from 'mammoth';
 import { ProcessTranscriptDto } from '../dto/ai/process-transcript.dto';
+import { UpdateAiResultDto } from '../dto/ai/update-ai-result.dto';
 import { UpdateActionItemDto } from '../dto/ai/update-action-item.dto';
 import { ActionItemStatus } from '../models/action-item.schema';
 import { AiService } from '../services/ai.service';
@@ -89,6 +90,18 @@ export class AiController {
   getResult(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     // Expune rezultatul AI complet. acum.
     return this.aiService.getResult(id, req.user);
+  }
+
+  @ApiOperation({ summary: 'Actualizeaza manual un AI result' })
+  @ApiParam({ name: 'id', description: 'ID-ul rezultatului AI' })
+  @Patch('results/:id')
+  updateResult(
+    @Param('id') id: string,
+    @Body() updateAiResultDto: UpdateAiResultDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    // Permite corectarea manuala a rezultatului AI.
+    return this.aiService.updateResult(id, updateAiResultDto, req.user);
   }
 
   @ApiOperation({ summary: 'Returneaza doar summary-ul unui AI result' })

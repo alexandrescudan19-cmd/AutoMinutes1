@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { FiRotateCcw, FiZap } from "react-icons/fi";
-import { Button, Card } from "../../../atoms";
+import { Button, Card, TextArea } from "../../../atoms";
 import { Modal } from "../../../molecules/common";
 import ActionItemList from "../../action-item/ActionItemList/ActionItemList.tsx";
 import TranscriptUploadForm from "../../transcript/TranscriptUploadForm/TranscriptUploadForm.tsx";
-import { getAiResult } from "../../../../services/ai";
+import { getAiResult, updateAiResult } from "../../../../services/ai";
 import { listMeetingActionItems } from "../../../../services/actionItems";
 import {
   listMeetingTranscriptVersions,
@@ -38,6 +38,14 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [expandedTranscriptId, setExpandedTranscriptId] = useState("");
   const [restoringTranscriptId, setRestoringTranscriptId] = useState("");
+  const [isEditingResult, setIsEditingResult] = useState(false);
+  const [isSavingResult, setIsSavingResult] = useState(false);
+  const [resultDraft, setResultDraft] = useState({
+    summary: "",
+    keyPoints: "",
+    decisions: "",
+    followUpNotes: "",
+  });
 
   const loadActionItems = useCallback(async () => {
     try {
@@ -145,6 +153,38 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
     }
   };
 
+  const startEditingResult = () => {
+    if (!aiResult) return;
+    setResultDraft({
+      summary: aiResult.summary,
+      keyPoints: aiResult.keyPoints.join("\n"),
+      decisions: aiResult.decisions.join("\n"),
+      followUpNotes: aiResult.followUpNotes ?? "",
+    });
+    setIsEditingResult(true);
+  };
+
+  const saveResult = async () => {
+    if (!aiResult) return;
+    setIsSavingResult(true);
+    try {
+      const updated = await updateAiResult(aiResult.id, {
+        summary: resultDraft.summary,
+        keyPoints: resultDraft.keyPoints.split("\n"),
+        decisions: resultDraft.decisions.split("\n"),
+        followUpNotes: resultDraft.followUpNotes || null,
+      });
+      setAiResult(updated);
+      setIsEditingResult(false);
+      toast.success("AI result updated.");
+      onMeetingChanged();
+    } catch {
+      toast.error("Couldn't update AI result.");
+    } finally {
+      setIsSavingResult(false);
+    }
+  };
+
   const subTabs: { key: SubTab; label: string }[] = [{ key: "transcript", label: "Transcript" }];
   if (aiResult) {
     subTabs.push({ key: "summary", label: "Summary" });
@@ -156,25 +196,86 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="inline-flex w-fit flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800">
-        {subTabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setSubTab(tab.key)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              subTab === tab.key
-                ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100"
-                : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex w-fit flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800">
+          {subTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setSubTab(tab.key)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                subTab === tab.key
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100"
+                  : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {aiResult && !isEditingResult && (
+          <Button type="button" variant="secondary" size="sm" onClick={startEditingResult}>
+            Edit result
+          </Button>
+        )}
       </div>
 
       {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading AI results...</p>}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+      {isEditingResult && aiResult && (
+        <Card title="Edit AI result">
+          <div className="flex flex-col gap-3">
+            <TextArea
+              label="Summary"
+              rows={4}
+              value={resultDraft.summary}
+              onChange={(event) =>
+                setResultDraft((current) => ({ ...current, summary: event.target.value }))
+              }
+            />
+            <TextArea
+              label="Key points"
+              hint="One item per line."
+              rows={5}
+              value={resultDraft.keyPoints}
+              onChange={(event) =>
+                setResultDraft((current) => ({ ...current, keyPoints: event.target.value }))
+              }
+            />
+            <TextArea
+              label="Decisions"
+              hint="One item per line."
+              rows={4}
+              value={resultDraft.decisions}
+              onChange={(event) =>
+                setResultDraft((current) => ({ ...current, decisions: event.target.value }))
+              }
+            />
+            <TextArea
+              label="Follow-up notes"
+              rows={3}
+              value={resultDraft.followUpNotes}
+              onChange={(event) =>
+                setResultDraft((current) => ({ ...current, followUpNotes: event.target.value }))
+              }
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isSavingResult}
+                onClick={() => setIsEditingResult(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="button" isLoading={isSavingResult} onClick={() => void saveResult()}>
+                Save result
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {subTab === "transcript" && (
         <Card

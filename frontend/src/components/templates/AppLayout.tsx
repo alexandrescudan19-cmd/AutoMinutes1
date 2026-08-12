@@ -254,7 +254,7 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
     await loadData();
     setOpen(false);
     if (notification.meetingId) {
-      navigate(`/meetings?meeting=${notification.meetingId}`);
+      navigate(`/meetings/${notification.meetingId}`);
     }
   };
 

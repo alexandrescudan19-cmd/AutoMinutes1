@@ -8,6 +8,7 @@ export type RealtimeEvent =
   | 'ai.processing'
   | 'ai.completed'
   | 'ai.failed'
+  | 'ai.result.updated'
   | 'actionItem.created'
   | 'actionItem.updated'
   | 'actionItem.deleted'

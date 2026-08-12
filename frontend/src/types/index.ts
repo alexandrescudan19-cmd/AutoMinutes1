@@ -208,6 +208,13 @@ export interface AIResult {
   updatedAt?: string;
 }
 
+export interface UpdateAIResultInput {
+  summary?: string;
+  keyPoints?: string[];
+  decisions?: string[];
+  followUpNotes?: string | null;
+}
+
 export interface ProcessTranscriptInput {
   meetingId: string;
   transcriptId?: string;
