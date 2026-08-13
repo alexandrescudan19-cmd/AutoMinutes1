@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Button, Input, Select } from "../../../atoms";
 import { ConfirmDialog, EditActions, EmptyState, StatusBadge, getStatusDotColor } from "../../../molecules/common";
 import { createActionItem, deleteActionItem, updateActionItem } from "../../../../services/actionItems";
+import { getFriendlyApiError } from "../../../../services/apiErrors";
 import { formatDate, toDateInputValue } from "../../../../utils/date.ts";
 import type { ActionItem, ActionItemListItem, ActionItemStatus } from "../../../../types";
 
@@ -117,8 +118,8 @@ export default function ActionItemList({
       toast.success("Action item updated.");
       setEditingId("");
       onChanged();
-    } catch {
-      toast.error("Couldn't update the action item.");
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't update the action item."));
     } finally {
       setIsSaving(false);
     }
@@ -132,8 +133,8 @@ export default function ActionItemList({
         status: item.status === "Completed" ? "Pending" : "Completed",
       });
       onChanged();
-    } catch {
-      toast.error("Couldn't update the status.");
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't update the status."));
     } finally {
       setBusyToggleId("");
     }
@@ -147,8 +148,8 @@ export default function ActionItemList({
       toast.success("Action item deleted.");
       setPendingDeleteId("");
       onChanged();
-    } catch {
-      toast.error("Couldn't delete the action item.");
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't delete the action item."));
     } finally {
       setIsDeleting(false);
     }
@@ -168,8 +169,8 @@ export default function ActionItemList({
       toast.success("Action item added.");
       closeAddForm();
       onChanged();
-    } catch {
-      toast.error("Couldn't add the action item.");
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't add the action item."));
     } finally {
       setIsCreating(false);
     }
