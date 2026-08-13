@@ -12,6 +12,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
+import toast from "react-hot-toast";
 import { Avatar, Button, Loader } from "../atoms";
 import { Modal, ThemeToggle } from "../molecules";
 import { MeetingForm, type MeetingFormValues } from "../organisms/meeting";
@@ -27,6 +28,7 @@ import {
   markNotificationRead,
   respondToInvitation,
 } from "../../services/notifications";
+import { getFriendlyApiError } from "../../services/apiErrors";
 import type { Invitation, Meeting, Notification } from "../../types";
 import { useRealtimeConnection, useRealtimeEvent } from "../../hooks/useRealtime";
 
@@ -248,13 +250,17 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
   );
 
   const openMeeting = async (notification: Notification) => {
-    if (!notification.isRead) {
-      await markNotificationRead(notification.id);
-    }
-    await loadData();
-    setOpen(false);
-    if (notification.meetingId) {
-      navigate(`/meetings/${notification.meetingId}`);
+    try {
+      if (!notification.isRead) {
+        await markNotificationRead(notification.id);
+      }
+      await loadData();
+      setOpen(false);
+      if (notification.meetingId) {
+        navigate(`/meetings/${notification.meetingId}`);
+      }
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't open this notification."));
     }
   };
 
@@ -263,14 +269,26 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
     try {
       await respondToInvitation(invitation.id, status);
       await loadData();
+      toast.success(status === "Acceptat" ? "Invitation accepted." : "Invitation rejected.");
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't respond to this invitation."));
     } finally {
       setRespondingId("");
     }
   };
 
   const handleMarkAllRead = async () => {
-    await markAllNotificationsRead();
-    await loadData();
+    try {
+      await markAllNotificationsRead();
+      await loadData();
+    } catch (error) {
+      toast.error(getFriendlyApiError(error, "Couldn't mark notifications as read."));
+    }
+  };
+
+  const openInvitationMeeting = (meetingId: string) => {
+    setOpen(false);
+    navigate(`/meetings/${meetingId}`);
   };
 
   return (
@@ -307,7 +325,7 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Meeting ID: {invitation.meetingId}
                   </p>
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       leftIcon={<FiCheck />}
@@ -323,6 +341,14 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
                       onClick={() => void handleRespond(invitation, "Respins")}
                     >
                       Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={respondingId === invitation.id}
+                      onClick={() => openInvitationMeeting(invitation.meetingId)}
+                    >
+                      Open
                     </Button>
                   </div>
                 </div>
