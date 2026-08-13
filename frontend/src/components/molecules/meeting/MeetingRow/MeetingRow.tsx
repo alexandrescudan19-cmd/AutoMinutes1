@@ -15,10 +15,10 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
     <button
       type="button"
       onClick={() => onClick?.(meeting)}
-      className="block w-full min-w-0 border-b border-gray-100 text-left transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60"
+      className="block w-full min-w-0 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
+      aria-label={`Open meeting ${meeting.title}`}
     >
-      {/* Mobile: single compact line - status dot, name, date */}
-      <div className="flex min-w-0 items-start gap-2 px-4 py-3 sm:hidden">
+      <div className="flex min-w-0 items-start gap-3 px-4 py-3 sm:hidden">
         <span
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${getStatusDotColor(meeting.status)}`}
           aria-hidden="true"
@@ -30,11 +30,18 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
           <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
             {formatDateTime(meeting.startDateTime)}
           </span>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <StatusBadge status={meeting.status} />
+            <StatusBadge status={meeting.aiStatus} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+            <span>{meeting.attendeeIds?.length ?? 0} people</span>
+            <span>{meeting.actionItemsCount ?? 0} tasks</span>
+          </div>
         </div>
       </div>
 
-      {/* Tablet/desktop: full detail grid */}
-      <div className="hidden min-w-0 gap-3 px-4 py-3 sm:grid sm:grid-cols-[minmax(0,1fr)_10rem_7rem_4rem_4rem] sm:items-center">
+      <div className="hidden min-w-0 grid-cols-[minmax(0,1fr)_10rem_8rem_8rem_5rem_5rem] gap-3 px-4 py-3 sm:grid sm:items-center">
         <div className="min-w-0">
           <p className="break-words font-medium text-gray-900 dark:text-gray-100">{meeting.title}</p>
           {meeting.description && (
@@ -48,6 +55,10 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
 
         <div>
           <StatusBadge status={meeting.status} />
+        </div>
+
+        <div>
+          <StatusBadge status={meeting.aiStatus} />
         </div>
 
         <div className="text-sm text-gray-600 sm:text-center dark:text-gray-400">

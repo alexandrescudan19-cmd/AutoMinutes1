@@ -105,7 +105,7 @@ export default function DashboardPage() {
 
         {!isLoading && !error && (
           <>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard label="Total meetings" value={stats.total} accent="blue" />
               <StatCard label="Processing" value={stats.processing} accent="amber" />
               <StatCard label="Completed" value={stats.completed} accent="green" />

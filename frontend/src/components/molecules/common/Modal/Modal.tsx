@@ -40,7 +40,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
     >
@@ -49,7 +49,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
         role="dialog"
         aria-modal="true"
         className={cn(
-          'flex max-h-[85vh] w-full flex-col rounded-xl bg-white shadow-xl dark:bg-gray-900 dark:ring-1 dark:ring-gray-800',
+          'flex max-h-[94dvh] w-full flex-col rounded-t-xl bg-white shadow-xl dark:bg-gray-900 dark:ring-1 dark:ring-gray-800 sm:max-h-[85vh] sm:rounded-xl',
           sizes[size],
         )}
         onClick={(e) => e.stopPropagation()}
@@ -70,10 +70,10 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
 
         {footer && (
-          <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-800">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-5">
             {footer}
           </div>
         )}
