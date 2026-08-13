@@ -21,6 +21,7 @@ import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus
 import { processTranscript, uploadTranscriptFile } from "../../services/ai";
 import { API_BASE_URL } from "../../services/api";
 import { clearAuthSession, getAccessToken, isAccessTokenValid } from "../../services/authSession";
+import { getMeeting } from "../../services/meetings";
 import {
   listInvitations,
   listNotifications,
@@ -31,6 +32,7 @@ import {
 import { getFriendlyApiError } from "../../services/apiErrors";
 import type { Invitation, Meeting, Notification } from "../../types";
 import { useRealtimeConnection, useRealtimeEvent } from "../../hooks/useRealtime";
+import { formatDateTime } from "../../utils/date";
 
 export interface AppLayoutProps {
   children: ReactNode;
@@ -204,6 +206,7 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [invitationMeetings, setInvitationMeetings] = useState<Record<string, Meeting>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [respondingId, setRespondingId] = useState("");
 
@@ -216,6 +219,18 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
       ]);
       setNotifications(nextNotifications);
       setInvitations(nextInvitations);
+      const pending = nextInvitations
+        .filter((invitation) => invitation.invitationStatus === "Invitat")
+        .slice(0, 3);
+      const meetingPairs = await Promise.all(
+        pending.map(async (invitation) => {
+          const meeting = await getMeeting(invitation.meetingId).catch(() => null);
+          return [invitation.meetingId, meeting] as const;
+        }),
+      );
+      setInvitationMeetings(
+        Object.fromEntries(meetingPairs.filter(([, meeting]) => meeting)) as Record<string, Meeting>,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -314,45 +329,48 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
           {pendingInvitations.length > 0 && (
             <div className="mb-3 flex flex-col gap-2">
               <p className="text-xs font-medium uppercase text-gray-400">Invitations</p>
-              {pendingInvitations.slice(0, 3).map((invitation) => (
-                <div
-                  key={invitation.id}
-                  className="rounded-lg border border-gray-100 p-2 dark:border-gray-700"
-                >
-                  <p className="text-sm text-gray-800 dark:text-gray-100">
-                    Meeting invitation
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Meeting ID: {invitation.meetingId}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      leftIcon={<FiCheck />}
-                      isLoading={respondingId === invitation.id}
-                      onClick={() => void handleRespond(invitation, "Acceptat")}
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={respondingId === invitation.id}
-                      onClick={() => void handleRespond(invitation, "Respins")}
-                    >
-                      Reject
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={respondingId === invitation.id}
-                      onClick={() => openInvitationMeeting(invitation.meetingId)}
-                    >
-                      Open
-                    </Button>
+              {pendingInvitations.slice(0, 3).map((invitation) => {
+                const meeting = invitationMeetings[invitation.meetingId];
+                return (
+                  <div
+                    key={invitation.id}
+                    className="rounded-lg border border-gray-100 p-2 dark:border-gray-700"
+                  >
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                      {meeting?.title ?? "Meeting invitation"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {meeting ? formatDateTime(meeting.startDateTime) : `Meeting ID: ${invitation.meetingId}`}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        leftIcon={<FiCheck />}
+                        isLoading={respondingId === invitation.id}
+                        onClick={() => void handleRespond(invitation, "Acceptat")}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={respondingId === invitation.id}
+                        onClick={() => void handleRespond(invitation, "Respins")}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={respondingId === invitation.id}
+                        onClick={() => openInvitationMeeting(invitation.meetingId)}
+                      >
+                        Open
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
