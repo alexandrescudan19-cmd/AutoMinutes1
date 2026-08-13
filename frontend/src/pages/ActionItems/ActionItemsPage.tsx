@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
 import toast from "react-hot-toast";
@@ -30,6 +30,7 @@ function readCardFromParams(searchParams: URLSearchParams): CardKey {
 }
 
 export default function ActionItemsPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [actionItems, setActionItems] = useState<ActionItemListItem[]>([]);
   const [assigneeFilter, setAssigneeFilter] = useState(() => searchParams.get("assignee") ?? "all");
@@ -372,6 +373,7 @@ export default function ActionItemsPage() {
                 items={pagedItems}
                 showMeetingTitle
                 onChanged={() => void loadActionItems()}
+                onOpenMeeting={(meetingId) => navigate(`/meetings/${meetingId}`)}
                 highlightId={highlightId}
               />
               {pageCount > 1 && (

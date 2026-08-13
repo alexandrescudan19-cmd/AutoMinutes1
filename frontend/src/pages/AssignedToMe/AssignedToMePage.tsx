@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../../components/templates";
 import { Card } from "../../components/atoms";
 import { ActionItemList } from "../../components/organisms/action-item";
@@ -7,6 +8,7 @@ import { getStoredUser } from "../../services/authSession";
 import type { ActionItemListItem } from "../../types";
 
 export default function AssignedToMePage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<ActionItemListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [now] = useState(() => Date.now());
@@ -52,14 +54,24 @@ export default function AssignedToMePage() {
         </div>
         {dueSoon.length > 0 && (
           <Card title="Reminders">
-            <ActionItemList items={dueSoon} showMeetingTitle onChanged={() => void loadItems()} />
+            <ActionItemList
+              items={dueSoon}
+              showMeetingTitle
+              onChanged={() => void loadItems()}
+              onOpenMeeting={(meetingId) => navigate(`/meetings/${meetingId}`)}
+            />
           </Card>
         )}
         <Card title="My action items">
           {isLoading ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
           ) : (
-            <ActionItemList items={assigned} showMeetingTitle onChanged={() => void loadItems()} />
+            <ActionItemList
+              items={assigned}
+              showMeetingTitle
+              onChanged={() => void loadItems()}
+              onOpenMeeting={(meetingId) => navigate(`/meetings/${meetingId}`)}
+            />
           )}
         </Card>
       </div>
