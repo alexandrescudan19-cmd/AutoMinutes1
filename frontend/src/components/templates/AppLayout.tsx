@@ -5,6 +5,7 @@ import {
   FiCheck,
   FiChevronLeft,
   FiChevronRight,
+  FiHelpCircle,
   FiMenu,
   FiPlus,
   FiSearch,
@@ -103,6 +104,11 @@ const NAV_ITEMS = [
     label: "Search",
     to: "/search",
     icon: <FiSearch aria-hidden="true" size={18} />,
+  },
+  {
+    label: "User Guide",
+    to: "/help",
+    icon: <FiHelpCircle aria-hidden="true" size={18} />,
   },
 ];
 

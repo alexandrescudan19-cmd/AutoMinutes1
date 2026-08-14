@@ -11,6 +11,7 @@ import SettingsPage from "../pages/Settings/SettingsPage";
 import AssignedToMePage from "../pages/AssignedToMe/AssignedToMePage";
 import SearchPage from "../pages/Search/SearchPage";
 import SharePage from "../pages/Share/SharePage";
+import HelpPage from "../pages/Help/HelpPage";
 import ForgotPasswordPage from "../pages/ResetPassword/ForgotPassword";
 import ResetPasswordPage from "../pages/ResetPassword/ResetPassword";
 import { useAuth } from "../hooks/useAuth";
@@ -39,6 +40,7 @@ export default function AppRoutes() {
         <Route path="/action-items" element={<ActionItemsPage />} />
         <Route path="/assigned-to-me" element={<AssignedToMePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="/" element={<Navigate to="dashboard" replace />} />
