@@ -32,7 +32,10 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
           </span>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <StatusBadge status={meeting.status} />
-            <StatusBadge status={meeting.aiStatus} />
+            <StatusBadge
+              status={meeting.aiStatus}
+              label={meeting.aiStatus === "Completed" ? "AI done" : undefined}
+            />
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
             <span>{meeting.attendeeIds?.length ?? 0} people</span>
@@ -58,7 +61,10 @@ export default function MeetingRow({ meeting, onClick }: MeetingRowProps) {
         </div>
 
         <div>
-          <StatusBadge status={meeting.aiStatus} />
+          <StatusBadge
+            status={meeting.aiStatus}
+            label={meeting.aiStatus === "Completed" ? "AI done" : undefined}
+          />
         </div>
 
         <div className="text-sm text-gray-600 sm:text-center dark:text-gray-400">

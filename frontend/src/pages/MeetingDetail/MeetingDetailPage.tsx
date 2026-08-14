@@ -281,7 +281,10 @@ export default function MeetingDetailPage() {
               {meeting && (
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge status={meeting.status} />
-                  <StatusBadge status={meeting.aiStatus} />
+                  <StatusBadge
+                    status={meeting.aiStatus}
+                    label={meeting.aiStatus === "Completed" ? "AI done" : undefined}
+                  />
                 </div>
               )}
             </div>

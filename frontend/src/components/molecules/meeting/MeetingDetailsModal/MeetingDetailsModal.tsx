@@ -273,13 +273,13 @@ export default function MeetingDetailsModal({
                 />
               ) : (
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={meeting.status} />
                     <StatusBadge
                       status={meeting.aiStatus}
                       label={
                         meeting.aiStatus.toLowerCase() === "completed"
-                          ? "Transcript ready"
+                          ? "AI done"
                           : undefined
                       }
                     />
