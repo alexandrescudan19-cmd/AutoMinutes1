@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { FiRotateCcw, FiZap } from "react-icons/fi";
+import { FiAlertTriangle, FiCheckCircle, FiClock, FiRotateCcw, FiZap } from "react-icons/fi";
 import { Button, Card, TextArea } from "../../../atoms";
 import { Modal } from "../../../molecules/common";
 import ActionItemList from "../../action-item/ActionItemList/ActionItemList.tsx";
@@ -209,6 +209,52 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+            {meeting.aiStatus === "Completed" ? (
+              <FiCheckCircle className="text-green-500" aria-hidden="true" />
+            ) : meeting.aiStatus === "Failed" ? (
+              <FiAlertTriangle className="text-red-500" aria-hidden="true" />
+            ) : (
+              <FiClock className="text-amber-500" aria-hidden="true" />
+            )}
+            {meeting.aiStatus}
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {meeting.aiStatus === "Completed"
+              ? "Summary and extracted items are ready."
+              : meeting.aiStatus === "Failed"
+                ? "Previous results are kept. Upload or retry a transcript."
+                : meeting.aiStatus === "Processing"
+                  ? "The backend is generating insights now."
+                  : "Add a transcript to generate meeting insights."}
+          </p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {transcriptVersions.length}
+          </p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Transcript versions saved
+          </p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {actionItems.length}
+          </p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Action items from this meeting
+          </p>
+        </div>
+      </div>
+
+      {meeting.aiStatus === "Failed" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          AI processing failed. Check the provider quota/key, then retry from the Transcript tab.
+        </div>
+      )}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="inline-flex w-fit flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800">
           {subTabs.map((tab) => (
@@ -311,7 +357,7 @@ export default function AiResultsPanel({ meeting, onMeetingChanged }: AiResultsP
           {isProcessing ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <FiZap className="ai-pulse-icon text-3xl text-brand" aria-hidden="true" />
-              <p className="ai-shimmer-text text-base font-medium">Processing your transcript with AI…</p>
+              <p className="ai-shimmer-text text-base font-medium">Processing your transcript with AI...</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 This can take a minute or two - feel free to keep browsing, this will update on its own.
               </p>

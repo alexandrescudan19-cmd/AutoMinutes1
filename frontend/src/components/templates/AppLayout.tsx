@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import toast from "react-hot-toast";
-import { Avatar, Button, Loader } from "../atoms";
+import { Avatar, Badge, Button, Loader } from "../atoms";
 import { Modal, ThemeToggle } from "../molecules";
 import { MeetingForm, type MeetingFormValues } from "../organisms/meeting";
 import { useMeetingsStore } from "../../stores/meetingsStore";
@@ -314,16 +314,22 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
             collapsed ? "md:left-0" : ""
           }`}
         >
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notifications</p>
-            <button
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notifications</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {unreadCount} unread / {pendingInvitations.length} pending invites
+              </p>
+            </div>
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               disabled={unreadCount === 0}
               onClick={() => void handleMarkAllRead()}
-              className="text-xs font-medium text-brand disabled:text-gray-400"
             >
-              Mark all read
-            </button>
+              Mark read
+            </Button>
           </div>
 
           {pendingInvitations.length > 0 && (
@@ -336,12 +342,17 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
                     key={invitation.id}
                     className="rounded-lg border border-gray-100 p-2 dark:border-gray-700"
                   >
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {meeting?.title ?? "Meeting invitation"}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {meeting ? formatDateTime(meeting.startDateTime) : `Meeting ID: ${invitation.meetingId}`}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-medium text-gray-800 dark:text-gray-100">
+                          {meeting?.title ?? "Meeting invitation"}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {meeting ? formatDateTime(meeting.startDateTime) : `Meeting ID: ${invitation.meetingId}`}
+                        </p>
+                      </div>
+                      <Badge variant="info">Invite</Badge>
+                    </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Button
                         size="sm"
@@ -386,16 +397,24 @@ function NotificationMenu({ collapsed }: { collapsed: boolean }) {
                 key={notification.id}
                 type="button"
                 onClick={() => void openMeeting(notification)}
-                className={`rounded-lg p-2 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                className={`rounded-lg border p-2 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
                   notification.isRead ? "opacity-70" : "bg-brand/5 dark:bg-brand/10"
-                }`}
+                } border-gray-100 dark:border-gray-700`}
               >
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {notification.title}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {notification.title}
+                  </p>
+                  {!notification.isRead && <Badge variant="info">New</Badge>}
+                </div>
                 <p className="line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
                   {notification.message}
                 </p>
+                {notification.sentAt && (
+                  <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+                    {formatDateTime(notification.sentAt)}
+                  </p>
+                )}
               </button>
             ))}
           </div>

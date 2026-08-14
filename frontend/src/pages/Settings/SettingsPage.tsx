@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { FiCheckCircle, FiExternalLink, FiInfo, FiRefreshCw } from "react-icons/fi";
 import { Badge, Button, Card } from "../../components/atoms";
 import { AppLayout } from "../../components/templates";
 import { useGoogleConnectionStatus } from "../../hooks/useGoogleConnectionStatus";
@@ -147,13 +148,13 @@ export default function SettingsPage() {
         </Card>
 
         <Card title="Google Calendar">
-          <div className="flex items-center justify-between gap-4">
-            <div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 Connect your Google account so the meetings you create show up on your
                 own calendar, with you as the organizer.
               </p>
-              <div className="mt-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {loading ? (
                   <Badge variant="neutral">Checking...</Badge>
                 ) : connected ? (
@@ -161,19 +162,53 @@ export default function SettingsPage() {
                 ) : (
                   <Badge variant="warning">Not connected</Badge>
                 )}
+                <Badge variant="neutral">Calendar events</Badge>
+                <Badge variant="neutral">Google Meet links</Badge>
+              </div>
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+                <div className="flex gap-2">
+                  <FiInfo className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <p>
+                    OAuth must use this frontend URL and your backend callback URL in Google Cloud.
+                    If you use a dev tunnel, add that tunnel domain as an authorized JavaScript origin.
+                  </p>
+                </div>
+                <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                  <div className="rounded-md bg-white/70 p-2 dark:bg-gray-900/60">
+                    <span className="font-semibold">Frontend origin</span>
+                    <p className="mt-1 break-all">{window.location.origin}</p>
+                  </div>
+                  <div className="rounded-md bg-white/70 p-2 dark:bg-gray-900/60">
+                    <span className="font-semibold">Backend auth base</span>
+                    <p className="mt-1 break-all">{API_BASE_URL}</p>
+                  </div>
+                </div>
               </div>
             </div>
-            {connected ? (
+            <div className="flex flex-wrap gap-2 lg:justify-end">
               <Button
+                type="button"
                 variant="secondary"
-                isLoading={isDisconnecting}
-                onClick={() => void handleDisconnect()}
+                leftIcon={<FiRefreshCw aria-hidden="true" />}
+                isLoading={loading}
+                onClick={() => void refetch()}
               >
-                Disconnect
+                Refresh
               </Button>
-            ) : (
-              <Button onClick={handleConnect}>Connect Google Calendar</Button>
-            )}
+              {connected ? (
+                <Button
+                  variant="secondary"
+                  isLoading={isDisconnecting}
+                  onClick={() => void handleDisconnect()}
+                >
+                  Disconnect
+                </Button>
+              ) : (
+                <Button leftIcon={<FiExternalLink aria-hidden="true" />} onClick={handleConnect}>
+                  Connect Google Calendar
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
 
@@ -203,11 +238,22 @@ export default function SettingsPage() {
                     >
                       {aiStatus.ai.openAiCompatible?.configured ? "API key configured" : "No API key"}
                     </Badge>
+                    {aiStatus.ai.openAiCompatible?.configured && (
+                      <Badge variant="success">
+                        <FiCheckCircle className="mr-1" aria-hidden="true" />
+                        Ready
+                      </Badge>
+                    )}
                   </>
                 ) : (
                   <Badge variant="danger">Unavailable</Badge>
                 )}
               </div>
+              {!isAiStatusLoading && aiStatus && !aiStatus.ai.openAiCompatible?.configured && (
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                  Add an OpenAI-compatible API key in the backend environment to use cloud AI instead of fallback/local processing.
+                </p>
+              )}
               {aiStatusError && (
                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">{aiStatusError}</p>
               )}

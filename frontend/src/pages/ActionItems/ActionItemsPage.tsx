@@ -227,7 +227,7 @@ export default function ActionItemsPage() {
               {visibleActionItems.length} items across all meetings
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto_auto] sm:w-auto sm:min-w-[420px]">
             <FilterPill
               label="Assignee"
               value={assigneeFilter}
@@ -236,14 +236,14 @@ export default function ActionItemsPage() {
                 { value: "all", label: "All assignees" },
                 ...assignees.map((assignee) => ({ value: assignee, label: assignee })),
               ]}
-              width="w-56"
+              width="w-full"
               onChange={setAssigneeFilter}
             />
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={() => setAssigneeFilter("all")}
-                className="text-sm font-medium text-gray-400 transition-colors hover:text-brand dark:text-gray-500"
+                className="flex h-10 items-center justify-center rounded-full px-3 text-sm font-medium text-gray-400 transition-colors hover:text-brand dark:text-gray-500"
               >
                 Reset
               </button>
@@ -262,15 +262,16 @@ export default function ActionItemsPage() {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <Button
-          type="button"
-          variant="secondary"
-          fullWidth
-          leftIcon={<FiPlus className={`transition-transform duration-200 ${isAddFormOpen ? "rotate-45" : ""}`} />}
-          onClick={() => (isAddFormOpen ? closeAddForm() : setIsAddFormOpen(true))}
-        >
-          Add action item
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            leftIcon={<FiPlus className={`transition-transform duration-200 ${isAddFormOpen ? "rotate-45" : ""}`} />}
+            onClick={() => (isAddFormOpen ? closeAddForm() : setIsAddFormOpen(true))}
+          >
+            Add action item
+          </Button>
+        </div>
 
         <AnimatePresence initial={false}>
           {isAddFormOpen && (
@@ -339,7 +340,7 @@ export default function ActionItemsPage() {
           )}
         </AnimatePresence>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {cards.map((group) => {
             const isActive = activeCard === group.key;
             return (
@@ -347,7 +348,7 @@ export default function ActionItemsPage() {
                 key={group.key}
                 type="button"
                 onClick={() => selectCard(group.key)}
-                className={`rounded-xl border p-5 text-left transition-colors ${
+                className={`rounded-xl border p-4 text-left transition-colors sm:p-5 ${
                   isActive
                     ? "border-brand bg-brand/5 dark:bg-brand/10"
                     : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"

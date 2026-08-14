@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { FiClipboard, FiLink, FiPrinter } from "react-icons/fi";
+import { FiCalendar, FiClipboard, FiLink, FiList, FiPrinter } from "react-icons/fi";
 import { Button, Card } from "../../components/atoms";
+import { StatusBadge } from "../../components/molecules/common";
 import { getSharedMeeting } from "../../services/meetings";
 import { formatDate, formatDateRange } from "../../utils/date";
 import type { AIResult, ActionItem, Meeting } from "../../types";
@@ -67,12 +68,18 @@ export default function SharePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-950">
-      <div className="mx-auto flex max-w-3xl flex-col gap-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <main className="min-h-screen bg-gray-50 px-4 py-8 print:bg-white print:px-0 print:py-0 dark:bg-gray-950">
+      <div className="mx-auto flex max-w-4xl flex-col gap-5 print:max-w-none">
+        <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 print:border-0 print:p-0 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-medium text-brand">AutoMinutes</p>
             <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Shared Summary</h1>
+            {data && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <StatusBadge status={data.meeting.status} />
+                <StatusBadge status={data.meeting.aiStatus} />
+              </div>
+            )}
           </div>
           {data && (
             <div className="flex flex-wrap gap-2 print:hidden">
@@ -106,13 +113,28 @@ export default function SharePage() {
             </div>
           )}
         </div>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && (
+          <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </p>
+        )}
         {data && (
           <>
             <Card title={data.meeting.title}>
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <p>{formatDateRange(data.meeting.startDateTime, data.meeting.endDateTime)}</p>
-                <p>{data.meeting.description || "No description available."}</p>
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                  <p>{data.meeting.description || "No description available."}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-800 dark:bg-gray-950/40">
+                  <div className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                    <FiCalendar className="mt-0.5 shrink-0" aria-hidden="true" />
+                    <span>{formatDateRange(data.meeting.startDateTime, data.meeting.endDateTime)}</span>
+                  </div>
+                  <div className="mt-2 flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                    <FiList className="mt-0.5 shrink-0" aria-hidden="true" />
+                    <span>{data.actionItems.length} action items</span>
+                  </div>
+                </div>
               </div>
             </Card>
             <Card title="Summary">
@@ -151,9 +173,10 @@ export default function SharePage() {
               {data.actionItems.length ? (
                 <div className="flex flex-col gap-2">
                   {data.actionItems.map((item) => (
-                    <div key={item.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.task}</p>
-                      <p className="text-xs text-gray-500">{item.responsiblePerson} / {item.status}</p>
+                    <div key={item.id} className="grid gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700 sm:grid-cols-[minmax(0,1fr)_160px_120px] sm:items-center">
+                      <p className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">{item.task}</p>
+                      <p className="break-words text-xs text-gray-500">{item.responsiblePerson}</p>
+                      <StatusBadge status={item.status} />
                     </div>
                   ))}
                 </div>
