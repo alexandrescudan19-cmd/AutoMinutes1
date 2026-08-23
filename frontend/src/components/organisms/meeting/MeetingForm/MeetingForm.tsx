@@ -124,9 +124,6 @@ export default function MeetingForm({
     ...(showGoogleCalendarOption && isFutureMeeting
       ? [{ id: "google" as const, label: "Google Meet" }]
       : []),
-    ...(showTranscriptOption && !isFutureMeeting
-      ? [{ id: "transcript" as const, label: "Transcript" }]
-      : []),
   ];
   const [stepIndex, setStepIndex] = useState(0);
   const activeStep = steps[stepIndex].id;
@@ -272,6 +269,60 @@ export default function MeetingForm({
     }
   };
 
+  const transcriptFields = (
+    <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+      <SectionLabel icon={<FiFileText aria-hidden="true" />}>
+        Transcript
+      </SectionLabel>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        This meeting is in the past. You can attach the transcript now and it
+        will go straight into AI processing after creation.
+      </p>
+      <TextArea
+        value={transcript}
+        onChange={(e) => setTranscript(e.target.value)}
+        placeholder="Paste the meeting transcript here (optional)..."
+        rows={8}
+        className="font-mono text-sm"
+        style={{ resize: "none" }}
+      />
+      <input
+        ref={transcriptFileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => void handleTranscriptFileChange(e.target.files?.[0])}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          leftIcon={<FiUpload aria-hidden="true" />}
+          onClick={() => transcriptFileInputRef.current?.click()}
+        >
+          Upload transcript file
+        </Button>
+        {transcript && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            leftIcon={<FiEye aria-hidden="true" />}
+            onClick={() => setIsTranscriptViewOpen(true)}
+          >
+            View full transcript
+          </Button>
+        )}
+      </div>
+      {transcriptFile && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Selected file: {transcriptFile.name}
+          {!transcript && " - preview unavailable for this file type"}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex flex-col">
       <div className="mb-4 flex items-center">
@@ -403,6 +454,7 @@ export default function MeetingForm({
               onChange={setAttendeeIds}
               requireEmail={isFutureMeeting}
             />
+            {showTranscriptOption && !isFutureMeeting && transcriptFields}
           </div>
         )}
 
@@ -431,60 +483,7 @@ export default function MeetingForm({
         )}
 
         {activeStep === "transcript" && (
-          <div className="flex flex-col gap-2">
-            <SectionLabel icon={<FiFileText aria-hidden="true" />}>
-              Transcript
-            </SectionLabel>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              The selected date is in the past. You can attach the meeting
-              transcript now - at Finish, it will automatically go into AI
-              processing.
-            </p>
-            <TextArea
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Paste the meeting transcript here (optional)..."
-              rows={8}
-              className="font-mono text-sm"
-              style={{ resize: "none" }}
-            />
-            <input
-              ref={transcriptFileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) =>
-                void handleTranscriptFileChange(e.target.files?.[0])
-              }
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                leftIcon={<FiUpload aria-hidden="true" />}
-                onClick={() => transcriptFileInputRef.current?.click()}
-              >
-                Upload transcript file
-              </Button>
-              {transcript && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<FiEye aria-hidden="true" />}
-                  onClick={() => setIsTranscriptViewOpen(true)}
-                >
-                  View full transcript
-                </Button>
-              )}
-            </div>
-            {transcriptFile && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Selected file: {transcriptFile.name}
-                {!transcript && " - preview unavailable for this file type"}
-              </p>
-            )}
-          </div>
+          transcriptFields
         )}
       </div>
 
