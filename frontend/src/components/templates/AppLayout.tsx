@@ -667,6 +667,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           onCancel={() => setIsNewMeetingOpen(false)}
           submitLabel="Create meeting"
           showGoogleCalendarOption
+          showTranscriptOption
         />
       </Modal>
     </div>

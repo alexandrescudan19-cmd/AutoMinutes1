@@ -32,6 +32,7 @@ export interface MeetingFormProps {
   onCancel: () => void;
   submitLabel?: string;
   showGoogleCalendarOption?: boolean;
+  showTranscriptOption?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -79,6 +80,7 @@ export default function MeetingForm({
   onCancel,
   submitLabel = "Save",
   showGoogleCalendarOption = false,
+  showTranscriptOption = false,
 }: MeetingFormProps) {
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(
@@ -115,15 +117,16 @@ export default function MeetingForm({
     ? new Date(startDateTime).getTime() > now
     : true;
 
-  const smartStep: { id: StepId; label: string } = isFutureMeeting
-    ? { id: "google", label: "Google Meet" }
-    : { id: "transcript", label: "Transcript" };
-
   const steps: { id: StepId; label: string }[] = [
     { id: "details", label: "Details" },
     { id: "schedule", label: "Schedule" },
     { id: "attendees", label: "Attendees" },
-    ...(showGoogleCalendarOption ? [smartStep] : []),
+    ...(showGoogleCalendarOption && isFutureMeeting
+      ? [{ id: "google" as const, label: "Google Meet" }]
+      : []),
+    ...(showTranscriptOption && !isFutureMeeting
+      ? [{ id: "transcript" as const, label: "Transcript" }]
+      : []),
   ];
   const [stepIndex, setStepIndex] = useState(0);
   const activeStep = steps[stepIndex].id;
