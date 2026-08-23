@@ -1,0 +1,6 @@
+*.local
+*.env.local
+render.env.production.local
+netlify.env.production.local
+backend/render.env.production.local
+frontend/netlify.env.production.local
